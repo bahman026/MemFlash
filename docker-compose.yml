@@ -1,0 +1,61 @@
+version: "3.8"
+services:
+    app:
+        build:
+            args:
+                gid: ${GROUP_ID}
+                uid: ${USER_ID}
+            context: ./
+            dockerfile: Dockerfile
+        image: articles
+        container_name: ${CONTAINER_NAME}_app
+        restart: unless-stopped
+        working_dir: /var/www/html
+        volumes:
+            - ./:/var/www/html
+        networks:
+            - net
+
+
+    webserver:
+        image: nginx:alpine
+        container_name: ${CONTAINER_NAME}_nginx
+        restart: unless-stopped
+        ports:
+            - 127.0.0.1:${NGINX_EXPOSE_PORT}:80
+        volumes:
+            - ./:/var/www/html
+            - ./docker/nginx:/etc/nginx/conf.d/
+        networks:
+            - net
+
+    db:
+        image: postgres:latest
+        container_name: ${CONTAINER_NAME}_db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE}
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_USER: ${DB_USERNAME}
+        volumes:
+            - ./docker/volumes/postgres/data:/var/lib/postgresql/data
+        ports:
+            - 127.0.0.1:${POSTGRES_EXPOSE_PORT}:5432
+        networks:
+            - net
+
+    redis:
+        image: redis:alpine
+        container_name: ${CONTAINER_NAME}_redis
+        restart: always
+        ports:
+            - 127.0.0.1:${REDIS_EXPOSE_PORT}:6379
+        command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD}"
+        volumes:
+            - ./docker/volumes/redis:/data
+        networks:
+            - net
+
+networks:
+    net:
+        driver: bridge
