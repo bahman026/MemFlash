@@ -1,16 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserStatusEnum;
+use Carbon\Carbon;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property string|null $name
+ * @property string $email
+ * @property UserStatusEnum $status
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    /** @use HasFactory<UserFactory> */
+    use HasFactory;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -43,6 +55,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'status' => UserStatusEnum::class,
         ];
     }
 }

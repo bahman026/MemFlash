@@ -6,7 +6,7 @@ set -e
 
 composer install --no-interaction --optimize-autoloader
 
-php "/var/www/html/artisan" migrate --seed --force
+php "/var/www/html/artisan" migrate:fresh --seed --force
 
 #php "/var/www/html/artisan" vendor:publish --tag=filament-tables-views --force
 # Refresh caches

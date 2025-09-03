@@ -1,0 +1,51 @@
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  create-deployment-artifact:
+    name: Create Deployment Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer
+
+      - name: Install PHP Dependencies
+        working-directory: ./
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Compile CSS and JavaScript
+        working-directory: ./
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup Environment
+        working-directory: ./
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run Pint Test
+        working-directory: ./
+        run: |
+          ./vendor/bin/pint --test
+
+      - name: Run Pest Tests
+        working-directory: ./
+        run: |
+          ./vendor/bin/pest
+
+      - name: Run PHPStan Analysis
+        working-directory: ./
+        run: |
+          ./vendor/bin/phpstan --memory-limit=2048M analyse
