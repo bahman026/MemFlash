@@ -1,6 +1,6 @@
-# 📘 Memora
+# 📘 MemFlash
 
-**Memora** is a simple flashcard and spaced repetition system (SRS) built with **Laravel**.  
+**MemFlash** is a simple flashcard and spaced repetition system (SRS) built with **Laravel**.  
 It helps users learn and remember words, facts, or any subject more effectively by using the power of repetition.  
 
 ---
@@ -28,8 +28,8 @@ It helps users learn and remember words, facts, or any subject more effectively 
 
 1. Clone the repository  
    ```bash
-   git clone https://github.com/yourusername/memora.git
-   cd memora
+   git clone https://github.com/yourusername/memflash.git
+   cd memflash
 Install dependencies
 
 bash
@@ -63,7 +63,7 @@ php artisan serve
 Now open http://127.0.0.1:8000 🎉
 
 🧠 Spaced Repetition (SM-2 Algorithm)
-Memora uses the SM-2 algorithm, the same system used in Anki.
+MemFlash uses the SM-2 algorithm, the same system used in Anki.
 Each card gets an ease factor and an interval that adjusts based on how well you remember it.
 This ensures you review hard cards more often and easy cards less frequently.
 

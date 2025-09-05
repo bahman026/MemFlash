@@ -1,7 +1,7 @@
 @extends('components.layouts.dashboard')
 
 @section('seo')
-    <title>Study Session - {{ $deck->name }} - Memora</title>
+    <title>Study Session - {{ $deck->name }} - MemFlash</title>
     <meta name="description" content="Study flashcards from {{ $deck->name }} deck using spaced repetition">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
@@ -25,7 +25,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Mobile: Exit button at top right -->
                 <div class="flex justify-between items-center mb-4 sm:hidden">
                     <div></div>
@@ -36,7 +36,7 @@
                         Exit
                     </a>
                 </div>
-                
+
                 <!-- Desktop: Original layout -->
                 <div class="hidden sm:flex sm:flex-row items-center justify-between gap-4">
                     <!-- Stats Cards -->
@@ -47,7 +47,7 @@
                                 <div class="text-xs sm:text-sm text-gray-600">Remaining</div>
                             </div>
                         </div>
-                        
+
                         <div class="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-lg border border-white/20">
                             <div class="text-center">
                                 <div class="text-xl sm:text-2xl font-bold text-green-600" id="completed-cards">0</div>
@@ -55,7 +55,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <a href="{{ route('dashboard') }}" class="bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 px-4 py-2 lg:px-6 lg:py-3 rounded-xl lg:rounded-2xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl border border-white/20 backdrop-blur-sm text-sm flex items-center justify-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
@@ -63,7 +63,7 @@
                         Exit
                     </a>
                 </div>
-                
+
                 <!-- Mobile: Stats cards below -->
                 <div class="flex gap-3 sm:hidden justify-center">
                     <div class="bg-white/80 backdrop-blur-sm rounded-xl p-3 shadow-lg border border-white/20">
@@ -72,7 +72,7 @@
                             <div class="text-xs text-gray-600">Remaining</div>
                         </div>
                     </div>
-                    
+
                     <div class="bg-white/80 backdrop-blur-sm rounded-xl p-3 shadow-lg border border-white/20">
                         <div class="text-center">
                             <div class="text-xl font-bold text-green-600" id="completed-cards-mobile">0</div>
@@ -140,7 +140,7 @@
                                 </div>
                                 <div class="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 leading-tight px-1 sm:px-2" id="card-front">-</div>
                             </div>
-                            
+
                             <!-- Back of Card -->
                             <div id="card-back" class="hidden mb-6 sm:mb-8 lg:mb-12">
                                 <div class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-2 rounded-full bg-green-100 text-green-800 text-xs sm:text-sm font-medium mb-3 sm:mb-4 lg:mb-6">
@@ -239,7 +239,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Study Tips - Bottom of Page -->
         <div class="mt-6 sm:mt-8">
             <div class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-blue-200">
@@ -276,7 +276,7 @@ class StudySession {
         this.deckInfo = null;
         this.isAnswerShown = false;
         this.pendingUpdates = [];
-        
+
         this.init();
     }
 
@@ -299,23 +299,23 @@ class StudySession {
         try {
             console.log('Fetching cards for deck {{ $deck->id }}...');
             const response = await fetch(`/api/study/{{ $deck->id }}/cards`);
-            
+
             console.log('Response status:', response.status);
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('API Error:', errorText);
                 throw new Error(`Failed to load cards: ${response.status} - ${errorText}`);
             }
-            
+
             const data = await response.json();
             console.log('API Response:', data);
-            
+
             this.cards = data.cards;
             this.deckInfo = data.deck;
-            
+
             console.log('Loaded cards:', this.cards.length);
-            
+
             if (this.cards.length === 0) {
                 console.log('No cards available for this deck');
             }
@@ -338,11 +338,11 @@ class StudySession {
 
     showCurrentCard() {
         console.log('showCurrentCard called, cards length:', this.cards.length);
-        
+
         // Hide loading state and show card content
         document.getElementById('loading-state').classList.add('hidden');
         document.getElementById('card-content').classList.remove('hidden');
-        
+
         if (this.cards.length === 0) {
             console.log('No cards available, showing session complete');
             this.showSessionComplete();
@@ -351,15 +351,15 @@ class StudySession {
 
         const card = this.cards[this.currentCardIndex];
         console.log('Showing card:', card);
-        
+
         document.getElementById('card-front').textContent = card.front;
         document.getElementById('card-back-text').textContent = card.back;
-        
+
         // Hide answer and rating buttons
         document.getElementById('card-back').classList.add('hidden');
         document.getElementById('rating-buttons').classList.add('hidden');
         document.getElementById('show-answer-section').classList.remove('hidden');
-        
+
         // Debug: Check if button is visible
         const showAnswerBtn = document.getElementById('show-answer-btn');
         const showAnswerSection = document.getElementById('show-answer-section');
@@ -367,7 +367,7 @@ class StudySession {
         console.log('Show Answer Section:', showAnswerSection);
         console.log('Button text content:', showAnswerBtn ? showAnswerBtn.textContent : 'Button not found');
         console.log('Section classes:', showAnswerSection ? showAnswerSection.className : 'Section not found');
-        
+
         this.isAnswerShown = false;
         this.updateProgress();
         console.log('Card displayed successfully');
@@ -384,7 +384,7 @@ class StudySession {
         if (this.cards.length === 0) return;
 
         const card = this.cards[this.currentCardIndex];
-        
+
         // Add to pending updates
         this.pendingUpdates.push({
             card_id: card.id,
@@ -442,9 +442,9 @@ class StudySession {
         const totalCards = this.deckInfo.cards_loaded;
         const remainingCards = this.cards.length;
         const completedCards = totalCards - remainingCards;
-        
+
         const progressPercentage = totalCards > 0 ? (completedCards / totalCards) * 100 : 0;
-        
+
         document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
         document.getElementById('progress-text').textContent = `${completedCards} / ${totalCards}`;
         document.getElementById('progress-percentage').textContent = `${Math.round(progressPercentage)}%`;
@@ -452,7 +452,7 @@ class StudySession {
         document.getElementById('completed-cards').textContent = completedCards;
         document.getElementById('cards-loaded').textContent = totalCards;
         document.getElementById('session-stats').textContent = `${completedCards} completed`;
-        
+
         // Update mobile stats cards
         document.getElementById('cards-remaining-mobile').textContent = remainingCards;
         document.getElementById('completed-cards-mobile').textContent = completedCards;
@@ -462,7 +462,7 @@ class StudySession {
         document.getElementById('loading-state').classList.add('hidden');
         document.getElementById('card-content').classList.add('hidden');
         document.getElementById('session-complete').classList.remove('hidden');
-        
+
         // Send any pending updates
         this.sendUpdates();
     }
@@ -477,7 +477,7 @@ class StudySession {
     async restartSession() {
         document.getElementById('session-complete').classList.add('hidden');
         document.getElementById('loading-state').classList.remove('hidden');
-        
+
         try {
             await this.loadCards();
             this.currentCardIndex = 0;
@@ -498,19 +498,19 @@ class StudySession {
         if ('speechSynthesis' in window) {
             // Stop any current speech
             speechSynthesis.cancel();
-            
+
             const utterance = new SpeechSynthesisUtterance(text);
-            
+
             // Configure speech settings
             utterance.lang = 'en-US'; // Change to 'fa-IR' for Persian if needed
             utterance.rate = 0.8; // Slightly slower for better comprehension
             utterance.pitch = 1.0;
             utterance.volume = 0.8;
-            
+
             // Visual feedback - show speaking state
             const speakBtn = document.getElementById('speak-btn');
             const originalContent = speakBtn.innerHTML;
-            
+
             speakBtn.innerHTML = `
                 <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
@@ -519,17 +519,17 @@ class StudySession {
             `;
             speakBtn.classList.add('bg-blue-200');
             speakBtn.disabled = true;
-            
+
             // Restore button when speech ends
             utterance.onend = () => {
                 speakBtn.innerHTML = originalContent;
                 speakBtn.classList.remove('bg-blue-200');
                 speakBtn.disabled = false;
             };
-            
+
             // Speak the text
             speechSynthesis.speak(utterance);
-            
+
             console.log('Speaking text:', text);
         } else {
             console.log('Text-to-speech not supported in this browser');

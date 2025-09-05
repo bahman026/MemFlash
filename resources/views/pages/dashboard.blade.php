@@ -1,6 +1,6 @@
 <x-layouts.dashboard>
     <x-slot name="seo">
-        <title>Dashboard - Memora</title>
+        <title>Dashboard - MemFlash</title>
         <meta name="description" content="Your personal flashcard dashboard">
     </x-slot>
 
@@ -191,7 +191,7 @@
                                         @endif
                                     </div>
                                 </div>
-                                
+
                                 <div class="flex flex-col space-y-1 mb-4 text-xs sm:text-sm text-gray-500">
                                     <span class="truncate font-medium">Created {{ $deck->created_at->diffForHumans() }}</span>
                                     <span class="font-medium">{{ $deck->new_cards_per_day }} cards/day</span>
@@ -218,7 +218,7 @@
                                         {{ $studiedCards }}/{{ $totalCards }} studied ({{ round($progressPercentage) }}%)
                                     </span>
                                 </div>
-                                
+
                                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
                                     <a href="{{ route('study.start', $deck) }}" class="flex-1 {{ $dueCards > 0 ? 'bg-primary-600 hover:bg-primary-700 shadow-md' : 'bg-gray-400 hover:bg-gray-500 shadow-sm' }} text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-center">
                                         Study Now

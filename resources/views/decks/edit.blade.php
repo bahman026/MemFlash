@@ -1,6 +1,6 @@
 <x-layouts.dashboard>
     <x-slot name="seo">
-        <title>Edit Deck - Memora</title>
+        <title>Edit Deck - MemFlash</title>
         <meta name="description" content="Edit your flashcard deck">
     </x-slot>
 
@@ -43,9 +43,9 @@
                 <!-- Deck Name -->
                 <div class="mb-4 sm:mb-6">
                     <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">Deck Name</label>
-                    <input type="text" 
-                           id="name" 
-                           name="name" 
+                    <input type="text"
+                           id="name"
+                           name="name"
                            value="{{ old('name', $deck->name) }}"
                            required
                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors @error('name') border-red-300 @enderror">
@@ -58,9 +58,9 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
                     <div>
                         <label for="new_cards_per_day" class="block text-sm font-semibold text-gray-700 mb-2">Cards per day</label>
-                        <input type="number" 
-                               id="new_cards_per_day" 
-                               name="new_cards_per_day" 
+                        <input type="number"
+                               id="new_cards_per_day"
+                               name="new_cards_per_day"
                                value="{{ old('new_cards_per_day', $deck->new_cards_per_day) }}"
                                min="1"
                                max="100"
@@ -71,8 +71,8 @@
                     </div>
                     <div>
                         <label for="is_public" class="block text-sm font-semibold text-gray-700 mb-2">Visibility</label>
-                        <select id="is_public" 
-                                name="is_public" 
+                        <select id="is_public"
+                                name="is_public"
                                 class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors @error('is_public') border-red-300 @enderror">
                             <option value="0" {{ old('is_public', $deck->is_public) == 0 ? 'selected' : '' }}>Private</option>
                             <option value="1" {{ old('is_public', $deck->is_public) == 1 ? 'selected' : '' }}>Public</option>
@@ -108,11 +108,11 @@
 
                 <!-- Form Actions -->
                 <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <a href="{{ route('dashboard') }}" 
+                    <a href="{{ route('dashboard') }}"
                        class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 text-center">
                         Cancel
                     </a>
-                    <button type="submit" 
+                    <button type="submit"
                             class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
                         Update Deck
                     </button>

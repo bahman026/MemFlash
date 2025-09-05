@@ -6,11 +6,11 @@
     <link rel="canonical" href="{{ url()->current() }}">
     <link rel="icon" href="{{ asset('assets/images/favicon-300x300.png') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('assets/images/favicon-150x150.png') }}" sizes="192x192">
-    
+
     {{-- seo related tags --}}
     {{ $seo ?? '' }}
     @yield('seo')
-    
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -43,23 +43,23 @@
                 min-height: 44px;
                 min-width: 44px;
             }
-            
+
             /* Better scrolling on mobile */
             .overflow-auto {
                 -webkit-overflow-scrolling: touch;
             }
-            
+
             /* Prevent zoom on input focus */
             input, textarea, select {
                 font-size: 16px;
             }
         }
-        
+
         /* Smooth transitions for all interactive elements */
         button, a, .hover\:shadow-md:hover {
             transition: all 0.2s ease-in-out;
         }
-        
+
         /* Better focus states for accessibility */
         button:focus, a:focus {
             outline: 2px solid #0ea5e9;
@@ -75,10 +75,10 @@
             <div class="flex justify-between items-center h-14 sm:h-16">
                 <div class="flex items-center min-w-0 flex-1">
                     <div class="flex-shrink-0">
-                        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">📚 Memora</h1>
+                        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">📚 MemFlash</h1>
                     </div>
                 </div>
-                
+
                 <div class="flex items-center space-x-1 sm:space-x-4">
                     <!-- User Avatar and Name - Mobile -->
                     <div class="flex items-center space-x-2 sm:hidden">
@@ -94,7 +94,7 @@
                             @endif
                         </div>
                     </div>
-                    
+
                     <!-- User Avatar and Name - Desktop -->
                     <div class="hidden sm:flex items-center space-x-3">
                         <div class="flex-shrink-0">
@@ -113,7 +113,7 @@
                             <p class="text-xs text-gray-500 truncate max-w-32">{{ auth()->user()->email }}</p>
                         </div>
                     </div>
-                    
+
                     <!-- Mobile Menu Button -->
                     <div class="sm:hidden">
                         <button type="button" class="text-gray-500 hover:text-gray-700 p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500" onclick="toggleMobileMenu()">
@@ -122,7 +122,7 @@
                             </svg>
                         </button>
                     </div>
-                    
+
                     <!-- Desktop Logout Button -->
                     <form method="POST" action="{{ route('logout') }}" class="hidden sm:inline">
                         @csrf
@@ -132,7 +132,7 @@
                     </form>
                 </div>
             </div>
-            
+
             <!-- Mobile Menu -->
             <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-200 py-3">
                 <div class="space-y-3">
@@ -161,7 +161,7 @@
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             const isHidden = menu.classList.contains('hidden');
-            
+
             if (isHidden) {
                 menu.classList.remove('hidden');
                 // Add smooth animation
@@ -184,12 +184,12 @@
                 }, 200);
             }
         }
-        
+
         // Close mobile menu when clicking outside
         document.addEventListener('click', function(event) {
             const menu = document.getElementById('mobile-menu');
             const button = event.target.closest('button[onclick="toggleMobileMenu()"]');
-            
+
             if (!menu.contains(event.target) && !button && !menu.classList.contains('hidden')) {
                 menu.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
                 menu.style.opacity = '0';
@@ -211,7 +211,7 @@
                 button.addEventListener('touchstart', function() {
                     this.style.transform = 'scale(0.98)';
                 });
-                
+
                 button.addEventListener('touchend', function() {
                     this.style.transform = 'scale(1)';
                 });
@@ -231,7 +231,7 @@
                 if (!isDragging) return;
                 currentY = e.touches[0].clientY;
                 const diff = startY - currentY;
-                
+
                 // If swiping up and menu is open, close it
                 if (diff < -50) {
                     const menu = document.getElementById('mobile-menu');

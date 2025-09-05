@@ -10,7 +10,7 @@ use Illuminate\Database\Seeder;
 
 class AdminSeeder extends Seeder
 {
-    const string ADMIN_EMAIL = 'admin@memora.dev';
+    const string ADMIN_EMAIL = 'admin@memflash.dev';
 
     public function run(): void
     {

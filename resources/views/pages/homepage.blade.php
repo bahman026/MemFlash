@@ -5,13 +5,13 @@
 @else
     <x-layouts.app>
         <x-slot name="seo">
-            <title>Memora - Learn with Flashcards</title>
-            <meta name="description" content="Master any subject with Memora's intelligent flashcard system. Create, study, and track your learning progress.">
+            <title>MemFlash - Learn with Flashcards</title>
+            <meta name="description" content="Master any subject with MemFlash's intelligent flashcard system. Create, study, and track your learning progress.">
             <meta property="og:locale" content="en_US">
             <meta property="og:type" content="website">
             <meta property="og:url" content="{{ url()->current() }}">
-            <meta property="og:title" content="Memora - Learn with Flashcards">
-            <meta property="og:description" content="Master any subject with Memora's intelligent flashcard system. Create, study, and track your learning progress.">
+            <meta property="og:title" content="MemFlash - Learn with Flashcards">
+            <meta property="og:description" content="Master any subject with MemFlash's intelligent flashcard system. Create, study, and track your learning progress.">
         </x-slot>
 
         <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -19,19 +19,19 @@
                 <div class="text-center">
                     <div class="mb-6 sm:mb-8">
                         <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-                            📚 Welcome to Memora
+                            📚 Welcome to MemFlash
                         </h1>
                         <p class="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8">
                             Master any subject with our intelligent flashcard system
                         </p>
                     </div>
-                    
+
                     <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-6 sm:mb-8">
                         <h2 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 sm:mb-6">Get Started</h2>
                         <p class="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
                             Create personalized flashcards, track your progress, and learn more effectively.
                         </p>
-                        <a href="{{ route('login.page') }}" 
+                        <a href="{{ route('login.page') }}"
                            class="inline-flex items-center justify-center w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors">
                             <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -42,7 +42,7 @@
                             Continue with Google
                         </a>
                     </div>
-                    
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 text-left">
                         <div class="bg-white rounded-lg p-4 sm:p-6 shadow-lg">
                             <div class="text-2xl sm:text-3xl mb-3 sm:mb-4">🎯</div>
