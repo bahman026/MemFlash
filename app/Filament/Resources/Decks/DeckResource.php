@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Decks;
 
 use App\Filament\Resources\Decks\Pages\CreateDeck;
@@ -18,7 +20,7 @@ class DeckResource extends Resource
 {
     protected static ?string $model = Deck::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'Deck';
 

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources\Cards;
 
 use App\Filament\Resources\Cards\Pages\CreateCard;
@@ -18,7 +20,7 @@ class CardResource extends Resource
 {
     protected static ?string $model = Card::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string | BackedEnum | null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = 'Card';
 
