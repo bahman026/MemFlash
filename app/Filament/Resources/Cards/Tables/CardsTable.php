@@ -25,8 +25,8 @@ class CardsTable
                 TextColumn::make('interval')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('ease')
-                    ->numeric()
+                TextColumn::make('revised_at')
+                    ->dateTime()
                     ->sortable(),
                 TextColumn::make('last_reviewed')
                     ->dateTime()

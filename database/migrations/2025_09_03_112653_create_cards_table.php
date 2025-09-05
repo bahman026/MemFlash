@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('front');
             $table->string('back');
             $table->json('audio')->nullable();
-            $table->integer('interval')->default(1);
-            $table->float('ease')->default(2.5);
+            $table->integer('interval')->nullable();
+            $table->timestamp('revised_at')->nullable();
             $table->timestamp('last_reviewed')->nullable();
             $table->timestamps();
         });

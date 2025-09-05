@@ -194,7 +194,6 @@ class DeckFileProcessor
                 'front' => $cardData['front'],
                 'back' => $cardData['back'],
                 'interval' => 1,
-                'ease' => 2.5,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

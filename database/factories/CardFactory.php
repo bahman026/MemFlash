@@ -23,7 +23,6 @@ class CardFactory extends Factory
             'back' => $this->faker->sentence(6),
             'audio' => null, // optional, can later store a path or base64
             'interval' => 1,
-            'ease' => 2.5,
             'last_reviewed' => null,
         ];
     }

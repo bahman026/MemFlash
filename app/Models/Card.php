@@ -67,10 +67,10 @@ class Card extends Model
      */
     public function isDue(): bool
     {
-        if (!$this->revised_at) {
+        if (! $this->revised_at) {
             return true; // New cards are always due
         }
-        
+
         return $this->revised_at->isPast();
     }
 

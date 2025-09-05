@@ -27,10 +27,7 @@ class CardForm
                     ->required()
                     ->numeric()
                     ->default(1),
-                TextInput::make('ease')
-                    ->required()
-                    ->numeric()
-                    ->default(2.5),
+                DateTimePicker::make('revised_at'),
                 DateTimePicker::make('last_reviewed'),
             ]);
     }
