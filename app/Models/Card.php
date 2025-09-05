@@ -18,8 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $front
  * @property string $back
  * @property array|null $audio
- * @property positive-int $interval
- * @property float $ease
+ * @property int|null $interval
+ * @property Carbon|null $revised_at
  * @property Carbon|null $last_reviewed
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -36,7 +36,7 @@ class Card extends Model
         'back',
         'audio',
         'interval',
-        'ease',
+        'revised_at',
         'last_reviewed',
     ];
 
@@ -48,8 +48,9 @@ class Card extends Model
     protected function casts(): array
     {
         return [
-            'audio' => 'array',             // store audio as JSON
-            'last_reviewed' => 'datetime',  // last review timestamp
+            'audio' => 'array',
+            'revised_at' => 'datetime',
+            'last_reviewed' => 'datetime',
         ];
     }
 
@@ -62,12 +63,24 @@ class Card extends Model
     }
 
     /**
+     * Check if the card is due for review
+     */
+    public function isDue(): bool
+    {
+        if (!$this->revised_at) {
+            return true; // New cards are always due
+        }
+        
+        return $this->revised_at->isPast();
+    }
+
+    /**
      * Reset review schedule (for new copy)
      */
     public function resetSchedule(): void
     {
         $this->interval = 1;
-        $this->ease = 2.5;
+        $this->revised_at = null;
         $this->last_reviewed = null;
         $this->save();
     }
