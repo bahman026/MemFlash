@@ -16,16 +16,46 @@
             <form id="deck-create-form" method="POST" action="{{ route('decks.store') }}" enctype="multipart/form-data" class="p-4 sm:p-6">
                 @csrf
                 
-                <!-- Deck Name -->
+                <!-- Import Mode Selection -->
                 <div class="mb-4 sm:mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Import Mode</label>
+                    <div class="space-y-3">
+                        <label class="flex items-center">
+                            <input type="radio" name="import_mode" value="new" checked class="mr-3 text-primary-600 focus:ring-primary-500" onchange="toggleImportMode()">
+                            <span class="text-sm text-gray-700">Create New Deck</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="import_mode" value="existing" class="mr-3 text-primary-600 focus:ring-primary-500" onchange="toggleImportMode()">
+                            <span class="text-sm text-gray-700">Import to Existing Deck</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Deck Name (for new deck) -->
+                <div id="new-deck-section" class="mb-4 sm:mb-6">
                     <label for="deck_name" class="block text-sm font-semibold text-gray-700 mb-2">Deck Name</label>
                     <input type="text" 
                            id="deck_name" 
                            name="name" 
-                           required
                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors"
                            placeholder="Enter deck name">
                     @error('name')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <!-- Existing Deck Selection (for import) -->
+                <div id="existing-deck-section" class="mb-4 sm:mb-6 hidden">
+                    <label for="existing_deck_id" class="block text-sm font-semibold text-gray-700 mb-2">Select Deck</label>
+                    <select id="existing_deck_id" 
+                            name="existing_deck_id" 
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                        <option value="">Choose a deck...</option>
+                        @foreach(auth()->user()->decks as $deck)
+                            <option value="{{ $deck->id }}">{{ $deck->name }} ({{ $deck->cards_count }} cards)</option>
+                        @endforeach
+                    </select>
+                    @error('existing_deck_id')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
@@ -66,8 +96,8 @@
                     </div>
                 </div>
 
-                <!-- Deck Settings -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 sm:mb-6">
+                <!-- Deck Settings (only for new deck) -->
+                <div id="deck-settings-section" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 sm:mb-6">
                     <div>
                         <label for="new_cards_per_day" class="block text-sm font-semibold text-gray-700 mb-2">Cards per day</label>
                         <input type="number" 
@@ -125,6 +155,7 @@
                         Cancel
                     </button>
                     <button type="submit" 
+                            id="submit-button"
                             class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
                         Create Deck
                     </button>
@@ -146,6 +177,36 @@ function closeDeckModal() {
     // Reset form
     document.getElementById('deck-create-form').reset();
     document.getElementById('file-preview').classList.add('hidden');
+    // Reset to new deck mode
+    toggleImportMode();
+}
+
+function toggleImportMode() {
+    const newDeckMode = document.querySelector('input[name="import_mode"][value="new"]').checked;
+    const newDeckSection = document.getElementById('new-deck-section');
+    const existingDeckSection = document.getElementById('existing-deck-section');
+    const deckSettingsSection = document.getElementById('deck-settings-section');
+    const submitButton = document.getElementById('submit-button');
+    const deckNameInput = document.getElementById('deck_name');
+    const existingDeckSelect = document.getElementById('existing_deck_id');
+    
+    if (newDeckMode) {
+        // Show new deck section and settings, hide existing deck section
+        newDeckSection.classList.remove('hidden');
+        existingDeckSection.classList.add('hidden');
+        deckSettingsSection.classList.remove('hidden');
+        submitButton.textContent = 'Create Deck';
+        deckNameInput.required = true;
+        existingDeckSelect.required = false;
+    } else {
+        // Show existing deck section, hide new deck section and settings
+        newDeckSection.classList.add('hidden');
+        existingDeckSection.classList.remove('hidden');
+        deckSettingsSection.classList.add('hidden');
+        submitButton.textContent = 'Import to Deck';
+        deckNameInput.required = false;
+        existingDeckSelect.required = true;
+    }
 }
 
 // File upload preview
@@ -174,12 +235,31 @@ document.getElementById('deck-create-modal').addEventListener('click', function(
     }
 });
 
-// Prevent form submission if no file is selected
+// Prevent form submission if no file is selected or required fields are missing
 document.getElementById('deck-create-form').addEventListener('submit', function(e) {
     const fileInput = document.getElementById('deck_file');
+    const newDeckMode = document.querySelector('input[name="import_mode"][value="new"]').checked;
+    const deckNameInput = document.getElementById('deck_name');
+    const existingDeckSelect = document.getElementById('existing_deck_id');
+    
     if (!fileInput.files[0]) {
         e.preventDefault();
         alert('Please select a file to upload.');
+        return;
+    }
+    
+    if (newDeckMode) {
+        if (!deckNameInput.value.trim()) {
+            e.preventDefault();
+            alert('Please enter a deck name.');
+            return;
+        }
+    } else {
+        if (!existingDeckSelect.value) {
+            e.preventDefault();
+            alert('Please select a deck to import to.');
+            return;
+        }
     }
 });
 </script>
