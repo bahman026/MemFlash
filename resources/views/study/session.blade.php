@@ -123,12 +123,20 @@
                         <div id="card-content" class="hidden">
                             <!-- Front of Card -->
                             <div class="mb-6 sm:mb-8 lg:mb-12">
-                                <div class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-2 rounded-full bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium mb-3 sm:mb-4">
-                                    <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    Question
+                                <div class="flex items-center justify-between mb-3 sm:mb-4">
+                                    <div class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-2 rounded-full bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium">
+                                        <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        Question
+                                    </div>
+                                    <button id="speak-btn" class="inline-flex items-center px-2 py-1 sm:px-3 sm:py-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs sm:text-sm font-medium transition-colors duration-200" title="Play question audio">
+                                        <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                                        </svg>
+                                        <span class="hidden sm:inline">Play</span>
+                                    </button>
                                 </div>
                                 <div class="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 leading-tight px-1 sm:px-2" id="card-front">-</div>
                             </div>
@@ -319,6 +327,7 @@ class StudySession {
 
     setupEventListeners() {
         document.getElementById('show-answer-btn').addEventListener('click', () => this.showAnswer());
+        document.getElementById('speak-btn').addEventListener('click', () => this.playAudio());
         document.getElementById('again-btn').addEventListener('click', () => this.rateCard(0));
         document.getElementById('hard-btn').addEventListener('click', () => this.rateCard(1));
         document.getElementById('good-btn').addEventListener('click', () => this.rateCard(2));
@@ -477,6 +486,53 @@ class StudySession {
         } catch (error) {
             console.error('Failed to restart session:', error);
             this.showError('Failed to restart session. Please try again.');
+        }
+    }
+
+    playAudio() {
+        const frontText = document.getElementById('card-front').textContent;
+        this.speakText(frontText);
+    }
+
+    speakText(text) {
+        if ('speechSynthesis' in window) {
+            // Stop any current speech
+            speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // Configure speech settings
+            utterance.lang = 'en-US'; // Change to 'fa-IR' for Persian if needed
+            utterance.rate = 0.8; // Slightly slower for better comprehension
+            utterance.pitch = 1.0;
+            utterance.volume = 0.8;
+            
+            // Visual feedback - show speaking state
+            const speakBtn = document.getElementById('speak-btn');
+            const originalContent = speakBtn.innerHTML;
+            
+            speakBtn.innerHTML = `
+                <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                </svg>
+                <span class="hidden sm:inline">Playing...</span>
+            `;
+            speakBtn.classList.add('bg-blue-200');
+            speakBtn.disabled = true;
+            
+            // Restore button when speech ends
+            utterance.onend = () => {
+                speakBtn.innerHTML = originalContent;
+                speakBtn.classList.remove('bg-blue-200');
+                speakBtn.disabled = false;
+            };
+            
+            // Speak the text
+            speechSynthesis.speak(utterance);
+            
+            console.log('Speaking text:', text);
+        } else {
+            console.log('Text-to-speech not supported in this browser');
         }
     }
 }
