@@ -8,7 +8,8 @@
     <link rel="icon" href="{{ asset('assets/images/favicon-150x150.png') }}" sizes="192x192">
     
     {{-- seo related tags --}}
-    {{ $seo }}
+    {{ $seo ?? '' }}
+    @yield('seo')
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.tailwindcss.com"></script>
@@ -152,7 +153,8 @@
 
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6 xl:px-8">
-        {{ $slot }}
+        {{ $slot ?? '' }}
+        @yield('content')
     </main>
 
     <script>

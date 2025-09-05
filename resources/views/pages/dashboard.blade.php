@@ -38,14 +38,18 @@
 
         <!-- Welcome Section -->
         <div class="mb-4 sm:mb-6 lg:mb-8">
-            <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 leading-tight">
-                Welcome back, {{ auth()->user()->name }}! 👋
-            </h1>
-            <p class="text-gray-600 text-sm sm:text-base leading-relaxed">Ready to continue your learning journey?</p>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 leading-tight">
+                        Welcome back, {{ auth()->user()->name }}! 👋
+                    </h1>
+                    <p class="text-gray-600 text-sm sm:text-base leading-relaxed">Ready to continue your learning journey?</p>
+                </div>
+            </div>
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
             <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100">
                 <div class="p-4 sm:p-5">
                     <div class="flex items-center">
@@ -82,7 +86,7 @@
                 </div>
             </div>
 
-            <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100 sm:col-span-2 lg:col-span-1">
+            <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100">
                 <div class="p-4 sm:p-5">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
@@ -92,8 +96,44 @@
                         </div>
                         <div class="ml-3 sm:ml-4 w-0 flex-1 min-w-0">
                             <dl>
-                                <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Cards Today</dt>
-                                <dd class="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{{ $cardsToday }}</dd>
+                                <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Cards Due Today</dt>
+                                <dd class="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
+                                    @php
+                                        $totalDueCards = $decks->sum(function ($deck) {
+                                            return $deck->cards()
+                                                ->where(function ($query) {
+                                                    $query->whereNull('revised_at')
+                                                        ->orWhere('revised_at', '<=', now());
+                                                })
+                                                ->count();
+                                        });
+                                    @endphp
+                                    {{ $totalDueCards }}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100">
+                <div class="p-4 sm:p-5">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-sm">
+                                <span class="text-white text-lg sm:text-xl">🔥</span>
+                            </div>
+                        </div>
+                        <div class="ml-3 sm:ml-4 w-0 flex-1 min-w-0">
+                            <dl>
+                                <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Study Streak</dt>
+                                <dd class="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
+                                    @php
+                                        $studyStreak = 0; // This would be calculated from user study history
+                                        // For now, we'll show a placeholder
+                                    @endphp
+                                    {{ $studyStreak }} days
+                                </dd>
                             </dl>
                         </div>
                     </div>
@@ -120,9 +160,11 @@
                         </div>
                         <h3 class="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No decks yet</h3>
                         <p class="text-gray-500 mb-6 text-sm sm:text-base">Get started by creating your first flashcard deck!</p>
-                        <button onclick="openDeckModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            Create Your First Deck
-                        </button>
+                        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                            <button onclick="openDeckModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                Create Your First Deck
+                            </button>
+                        </div>
                     </div>
                 @else
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
@@ -153,12 +195,34 @@
                                 <div class="flex flex-col space-y-1 mb-4 text-xs sm:text-sm text-gray-500">
                                     <span class="truncate font-medium">Created {{ $deck->created_at->diffForHumans() }}</span>
                                     <span class="font-medium">{{ $deck->new_cards_per_day }} cards/day</span>
+                                    @php
+                                        $dueCards = $deck->cards()
+                                            ->where(function ($query) {
+                                                $query->whereNull('revised_at')
+                                                    ->orWhere('revised_at', '<=', now());
+                                            })
+                                            ->count();
+                                    @endphp
+                                    <span class="font-medium text-blue-600">
+                                        {{ $dueCards }} {{ Str::plural('card', $dueCards) }} due today
+                                    </span>
+                                    @php
+                                        $totalCards = $deck->cards()->count();
+                                        $studiedCards = $deck->cards()->whereNotNull('last_reviewed')->count();
+                                        $progressPercentage = $totalCards > 0 ? ($studiedCards / $totalCards) * 100 : 0;
+                                    @endphp
+                                    <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                        <div class="bg-green-500 h-2 rounded-full transition-all duration-300" style="width: {{ $progressPercentage }}%"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-500 mt-1">
+                                        {{ $studiedCards }}/{{ $totalCards }} studied ({{ round($progressPercentage) }}%)
+                                    </span>
                                 </div>
                                 
                                 <div class="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
-                                    <button class="flex-1 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                    <a href="{{ route('study.start', $deck) }}" class="flex-1 {{ $dueCards > 0 ? 'bg-primary-600 hover:bg-primary-700 shadow-md' : 'bg-gray-400 hover:bg-gray-500 shadow-sm' }} text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-center">
                                         Study Now
-                                    </button>
+                                    </a>
                                     <div class="flex space-x-2">
                                         <a href="{{ route('decks.edit', $deck) }}" class="flex-1 sm:flex-none px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 text-center">
                                             Edit

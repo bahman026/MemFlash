@@ -5,7 +5,16 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\StudyController;
 use Illuminate\Support\Facades\Route;
+
+// Root route - redirect to dashboard if authenticated, otherwise show welcome page
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('welcome');
+});
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -30,3 +39,8 @@ Route::get('/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.e
 Route::put('/decks/{deck}', [DeckController::class, 'update'])->name('decks.update');
 Route::delete('/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
 
+// Study routes
+Route::get('/study/{deck}', [StudyController::class, 'start'])->name('study.start');
+Route::get('/api/study/{deck}/cards', [StudyController::class, 'getCards'])->name('study.cards');
+Route::post('/api/study/cards/{card}', [StudyController::class, 'updateCard'])->name('study.update-card');
+Route::post('/api/study/batch-update', [StudyController::class, 'batchUpdate'])->name('study.batch-update');
