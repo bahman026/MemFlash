@@ -1,13 +1,33 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
+use Carbon\Carbon;
+use Database\Factories\CardFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * App\Models\Card
+ *
+ * @property positive-int $id
+ * @property positive-int $deck_id
+ * @property string $front
+ * @property string $back
+ * @property array|null $audio
+ * @property positive-int $interval
+ * @property float $ease
+ * @property Carbon|null $last_reviewed
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property-read Deck $deck
+ */
 class Card extends Model
 {
+    /** @use HasFactory<CardFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -20,10 +40,18 @@ class Card extends Model
         'last_reviewed',
     ];
 
-    protected $casts = [
-        'audio' => 'array',             // store audio as JSON
-        'last_reviewed' => 'datetime',  // last review timestamp
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'audio' => 'array',             // store audio as JSON
+            'last_reviewed' => 'datetime',  // last review timestamp
+        ];
+    }
 
     /**
      * The deck this card belongs to
