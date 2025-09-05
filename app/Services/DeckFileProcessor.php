@@ -177,6 +177,99 @@ class DeckFileProcessor
     }
 
     /**
+     * Import cards to existing deck (update existing, append new)
+     */
+    public function importToExistingDeck(UploadedFile $file, Deck $deck): array
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if ($extension === 'csv') {
+            $data = $this->processCsvFile($file);
+        } elseif (in_array($extension, ['xlsx', 'xls'])) {
+            $data = $this->processExcelFile($file);
+        } else {
+            throw new \InvalidArgumentException('Unsupported file format. Please upload CSV or Excel files.');
+        }
+
+        $newCards = 0;
+        $updatedCards = 0;
+        $skippedCards = 0;
+        $duplicateRows = 0;
+
+        Log::info("Starting import to deck '{$deck->name}' with " . count($data) . " rows from file: {$file->getClientOriginalName()}");
+
+        // Check for duplicate rows in the file data
+        $seenFronts = [];
+        $uniqueData = [];
+        
+        foreach ($data as $cardData) {
+            if (empty($cardData['front']) || empty($cardData['back'])) {
+                $skippedCards++;
+                continue;
+            }
+            
+            // Check for duplicates within the file
+            if (isset($seenFronts[$cardData['front']])) {
+                $duplicateRows++;
+                Log::debug("Duplicate row in file: '{$cardData['front']}'");
+                continue;
+            }
+            
+            $seenFronts[$cardData['front']] = true;
+            $uniqueData[] = $cardData;
+        }
+
+        Log::info("After removing duplicates: " . count($uniqueData) . " unique rows, {$duplicateRows} duplicates removed");
+
+        foreach ($uniqueData as $cardData) {
+            // Skip if front or back is empty
+            if (empty($cardData['front']) || empty($cardData['back'])) {
+                $skippedCards++;
+                Log::debug("Skipped empty card: front='{$cardData['front']}', back='{$cardData['back']}'");
+                continue;
+            }
+
+            // Check if a card with this front text already exists in the deck
+            $existingCard = Card::query()
+                ->where('deck_id', $deck->id)
+                ->where('front', $cardData['front'])
+                ->first();
+
+            if ($existingCard) {
+                // Update existing card
+                $existingCard->update([
+                    'back' => $cardData['back'],
+                    'updated_at' => now(),
+                ]);
+                $updatedCards++;
+                Log::debug("Updated existing card: '{$cardData['front']}' -> '{$cardData['back']}'");
+            } else {
+                // Create new card
+                Card::query()->create([
+                    'deck_id' => $deck->id,
+                    'front' => $cardData['front'],
+                    'back' => $cardData['back'],
+                    'interval' => 1,
+                ]);
+                $newCards++;
+                Log::debug("Created new card: '{$cardData['front']}' -> '{$cardData['back']}'");
+            }
+        }
+
+        $totalProcessed = $newCards + $updatedCards + $skippedCards;
+        Log::info("Import completed for deck '{$deck->name}': {$newCards} new cards, {$updatedCards} updated cards, {$skippedCards} skipped cards, {$duplicateRows} duplicate rows removed. Total processed: {$totalProcessed} from " . count($data) . " rows");
+
+        return [
+            'new_cards' => $newCards,
+            'updated_cards' => $updatedCards,
+            'skipped_cards' => $skippedCards,
+            'duplicate_rows' => $duplicateRows,
+            'total_processed' => $totalProcessed,
+            'total_rows' => count($data),
+        ];
+    }
+
+    /**
      * Create cards from processed data
      */
     private function createCardsFromData(Deck $deck, array $data): void
