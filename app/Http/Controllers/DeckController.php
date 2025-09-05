@@ -34,7 +34,7 @@ class DeckController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $importMode = $request->input('import_mode', 'new');
-        
+
         if ($importMode === 'new') {
             // Create new deck validation
             $request->validate([
@@ -91,21 +91,21 @@ class DeckController extends Controller
                 // Import to existing deck
                 $deck = Deck::findOrFail($request->input('existing_deck_id'));
                 $this->authorize('update', $deck);
-                
+
                 $result = $this->fileProcessor->importToExistingDeck($file, $deck);
 
                 $message = "Import completed for '{$deck->name}': ";
                 $message .= "{$result['new_cards']} new cards added, ";
                 $message .= "{$result['updated_cards']} existing cards updated";
-                
+
                 if ($result['skipped_cards'] > 0) {
                     $message .= ", {$result['skipped_cards']} cards skipped (empty data)";
                 }
-                
+
                 if ($result['duplicate_rows'] > 0) {
                     $message .= ", {$result['duplicate_rows']} duplicate rows removed";
                 }
-                
+
                 $message .= ". Total processed: {$result['total_processed']} from {$result['total_rows']} rows.";
 
                 return redirect()->route('dashboard')->with('success', $message);

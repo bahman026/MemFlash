@@ -201,31 +201,34 @@ class DeckFileProcessor
         // Check for duplicate rows in the file data
         $seenFronts = [];
         $uniqueData = [];
-        
+
         foreach ($data as $cardData) {
             if (empty($cardData['front']) || empty($cardData['back'])) {
                 $skippedCards++;
+
                 continue;
             }
-            
+
             // Check for duplicates within the file
             if (isset($seenFronts[$cardData['front']])) {
                 $duplicateRows++;
                 Log::debug("Duplicate row in file: '{$cardData['front']}'");
+
                 continue;
             }
-            
+
             $seenFronts[$cardData['front']] = true;
             $uniqueData[] = $cardData;
         }
 
-        Log::info("After removing duplicates: " . count($uniqueData) . " unique rows, {$duplicateRows} duplicates removed");
+        Log::info('After removing duplicates: ' . count($uniqueData) . " unique rows, {$duplicateRows} duplicates removed");
 
         foreach ($uniqueData as $cardData) {
             // Skip if front or back is empty
             if (empty($cardData['front']) || empty($cardData['back'])) {
                 $skippedCards++;
                 Log::debug("Skipped empty card: front='{$cardData['front']}', back='{$cardData['back']}'");
+
                 continue;
             }
 
@@ -257,7 +260,7 @@ class DeckFileProcessor
         }
 
         $totalProcessed = $newCards + $updatedCards + $skippedCards;
-        Log::info("Import completed for deck '{$deck->name}': {$newCards} new cards, {$updatedCards} updated cards, {$skippedCards} skipped cards, {$duplicateRows} duplicate rows removed. Total processed: {$totalProcessed} from " . count($data) . " rows");
+        Log::info("Import completed for deck '{$deck->name}': {$newCards} new cards, {$updatedCards} updated cards, {$skippedCards} skipped cards, {$duplicateRows} duplicate rows removed. Total processed: {$totalProcessed} from " . count($data) . ' rows');
 
         return [
             'new_cards' => $newCards,

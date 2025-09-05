@@ -120,6 +120,7 @@
                         </div>
                     </div>
 
+
                     <!-- Additional Info -->
                     <div class="text-center">
                         <p class="text-sm text-gray-500">
