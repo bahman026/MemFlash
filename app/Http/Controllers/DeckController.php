@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Deck;
 use App\Services\DeckFileProcessor;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,8 @@ use Illuminate\View\View;
 
 class DeckController extends Controller
 {
+    use AuthorizesRequests;
+
     public function __construct(
         private readonly DeckFileProcessor $fileProcessor
     ) {}
