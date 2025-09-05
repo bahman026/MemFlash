@@ -96,20 +96,7 @@
                             <p class="text-xs text-gray-500">Cards/Day</p>
                         </div>
                         <div>
-                            @php
-                                $daysOld = $deck->created_at->diffInDays(now());
-                                $hoursOld = $deck->created_at->diffInHours(now());
-                                $minutesOld = $deck->created_at->diffInMinutes(now());
-                                
-                                if ($daysOld >= 1) {
-                                    $age = $daysOld . ' day' . ($daysOld > 1 ? 's' : '');
-                                } elseif ($hoursOld >= 1) {
-                                    $age = $hoursOld . ' hour' . ($hoursOld > 1 ? 's' : '');
-                                } else {
-                                    $age = $minutesOld . ' minute' . ($minutesOld > 1 ? 's' : '');
-                                }
-                            @endphp
-                            <p class="text-2xl font-bold text-blue-600">{{ $age }}</p>
+                            <p class="text-2xl font-bold text-blue-600">{{ $deck->created_at->diffForHumans() }}</p>
                             <p class="text-xs text-gray-500">Age</p>
                         </div>
                         <div>
