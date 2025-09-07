@@ -10,18 +10,18 @@ use Illuminate\Database\Seeder;
 
 class AdminSeeder extends Seeder
 {
-    const string ADMIN_EMAIL = 'admin@memflash.dev';
+    const string ADMIN_EMAIL = 'admin@memflash.dev'; // Default fallback
 
     public function run(): void
     {
         $user = User::query()->firstOrCreate(
             [
-                'email' => self::ADMIN_EMAIL,
+                'email' => env('ADMIN_EMAIL', self::ADMIN_EMAIL),
             ],
             [
                 'name' => 'john doe',
                 'email_verified_at' => now(),
-                'password' => 'password',
+                'password' => env('ADMIN_PASSWORD', 'password'),
                 'status' => UserStatusEnum::ACTIVE->value,
             ]
         );
