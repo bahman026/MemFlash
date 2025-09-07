@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes (no authentication required)
 Route::get('/', function () {
-    return redirect()->route('dashboard');
+    return view('pages.index');
 })->name('welcome');
 
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
