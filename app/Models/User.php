@@ -23,10 +23,13 @@ use Illuminate\Notifications\Notifiable;
  * @property string $password
  * @property string|null $avatar
  * @property UserStatusEnum $status
+ * @property string $level
+ * @property array|null $preferences
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Deck> $decks
+ * @property-read Collection<int, UserStaticDeckProgress> $staticDeckProgress
  */
 class User extends Authenticatable
 {
@@ -45,6 +48,8 @@ class User extends Authenticatable
         'email',
         'password',
         'avatar',
+        'level',
+        'preferences',
     ];
 
     /**
@@ -68,6 +73,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'status' => UserStatusEnum::class,
+            'preferences' => 'array',
         ];
     }
 
@@ -77,5 +83,36 @@ class User extends Authenticatable
     public function decks(): HasMany
     {
         return $this->hasMany(Deck::class);
+    }
+
+    /**
+     * Get the user's progress on static decks
+     */
+    public function staticDeckProgress(): HasMany
+    {
+        return $this->hasMany(UserStaticDeckProgress::class);
+    }
+
+    /**
+     * Get static decks appropriate for user's level
+     */
+    public function getRecommendedStaticDecks()
+    {
+        return StaticDeck::active()
+            ->byLevel($this->level)
+            ->ordered()
+            ->get();
+    }
+
+    /**
+     * Get or create progress for a static deck
+     */
+    public function getStaticDeckProgress(StaticDeck $staticDeck): UserStaticDeckProgress
+    {
+        return $this->staticDeckProgress()
+            ->firstOrCreate(
+                ['static_deck_id' => $staticDeck->id],
+                ['total_cards' => 0] // Will be updated when cards are loaded
+            );
     }
 }

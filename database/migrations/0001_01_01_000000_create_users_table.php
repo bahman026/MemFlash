@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('password');
             $table->string('avatar')->nullable();
             $table->unsignedTinyInteger('status')->default(UserStatusEnum::ACTIVE->value);
+            $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
+            $table->json('preferences')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
