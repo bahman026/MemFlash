@@ -1,162 +1,48 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="canonical" href="{{ url()->current() }}">
-    <link rel="icon" href="{{ asset('assets/images/favicon-300x300.png') }}" sizes="32x32">
-    <link rel="icon" href="{{ asset('assets/images/favicon-150x150.png') }}" sizes="192x192">
+<x-layouts.app 
+    :show-level="auth()->check()" 
+    :show-user="auth()->check()"
+    :header-variant="'default'"
+    :header-title="'MemFlash'"
+    :header-subtitle="null"
+>
+    <x-slot name="seo">
+        {{-- SEO Meta Tags --}}
+        <title>MemFlash - Smart Flashcard Learning Platform | Spaced Repetition & Vocabulary Builder</title>
+        <meta name="description" content="MemFlash is the ultimate flashcard learning platform for vocabulary building, language learning, and memory enhancement. Use spaced repetition to learn faster with our study app and quiz cards.">
+        <meta name="keywords" content="MemFlash, flashcards, spaced repetition, vocabulary, memory app, learn faster, study app, vocabulary builder, language learning, review app, quiz cards, memory enhancement, learning platform">
+        <meta name="author" content="MemFlash">
+        
+        {{-- Open Graph Meta Tags --}}
+        <meta property="og:title" content="MemFlash - Smart Flashcard Learning Platform | Spaced Repetition & Vocabulary Builder">
+        <meta property="og:description" content="MemFlash is the ultimate flashcard learning platform for vocabulary building, language learning, and memory enhancement. Use spaced repetition to learn faster with our study app and quiz cards.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ asset('assets/images/og-image.png') }}">
+        <meta property="og:site_name" content="MemFlash">
+        
+        {{-- Twitter Card Meta Tags --}}
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="MemFlash - Smart Flashcard Learning Platform | Spaced Repetition & Vocabulary Builder">
+        <meta name="twitter:description" content="MemFlash is the ultimate flashcard learning platform for vocabulary building, language learning, and memory enhancement. Use spaced repetition to learn faster with our study app and quiz cards.">
+        <meta name="twitter:image" content="{{ asset('assets/images/og-image.png') }}">
+        
+        {{-- Additional SEO Meta Tags --}}
+        <meta name="robots" content="index, follow">
+        <meta name="googlebot" content="index, follow">
+        <link rel="alternate" hreflang="en" href="{{ url()->current() }}">
+    </x-slot>
 
-    {{-- SEO Meta Tags --}}
-    <title>MemFlash - Smart Flashcard Learning Platform | Spaced Repetition & Vocabulary Builder</title>
-    <meta name="description" content="MemFlash is the ultimate flashcard learning platform for vocabulary building, language learning, and memory enhancement. Use spaced repetition to learn faster with our study app and quiz cards.">
-    <meta name="keywords" content="MemFlash, flashcards, spaced repetition, vocabulary, memory app, learn faster, study app, vocabulary builder, language learning, review app, quiz cards, memory enhancement, learning platform">
-    <meta name="author" content="MemFlash">
-    
-    {{-- Open Graph Meta Tags --}}
-    <meta property="og:title" content="MemFlash - Smart Flashcard Learning Platform | Spaced Repetition & Vocabulary Builder">
-    <meta property="og:description" content="MemFlash is the ultimate flashcard learning platform for vocabulary building, language learning, and memory enhancement. Use spaced repetition to learn faster with our study app and quiz cards.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:image" content="{{ asset('assets/images/og-image.png') }}">
-    <meta property="og:site_name" content="MemFlash">
-    
-    {{-- Twitter Card Meta Tags --}}
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MemFlash - Smart Flashcard Learning Platform | Spaced Repetition & Vocabulary Builder">
-    <meta name="twitter:description" content="MemFlash is the ultimate flashcard learning platform for vocabulary building, language learning, and memory enhancement. Use spaced repetition to learn faster with our study app and quiz cards.">
-    <meta name="twitter:image" content="{{ asset('assets/images/og-image.png') }}">
-    
-    {{-- Additional SEO Meta Tags --}}
-    <meta name="robots" content="index, follow">
-    <meta name="googlebot" content="index, follow">
-    <link rel="alternate" hreflang="en" href="{{ url()->current() }}">
-    
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Mobile-specific improvements */
-        @media (max-width: 640px) {
-            button, a {
-                min-height: 44px;
-                min-width: 44px;
-            }
-            .overflow-auto {
-                -webkit-overflow-scrolling: touch;
-            }
-            input, textarea, select {
-                font-size: 16px;
-            }
-        }
-
-        /* Smooth transitions for all interactive elements */
-        button, a, .hover\:shadow-md:hover {
-            transition: all 0.2s ease-in-out;
-        }
-
-        /* Better focus states for accessibility */
-        button:focus, a:focus {
-            outline: 2px solid #0ea5e9;
-            outline-offset: 2px;
-        }
-
-    </style>
-</head>
-
-<body class="bg-gray-50 min-h-screen">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-14 sm:h-16">
-                <div class="flex items-center min-w-0 flex-1">
-                    <div class="flex-shrink-0">
-                        <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">📚 MemFlash</h1>
-                    </div>
-                </div>
-
-                <div class="flex items-center space-x-1 sm:space-x-4">
-                    @auth
-                        <!-- User Avatar and Name - Mobile -->
-                        <div class="flex items-center space-x-2 sm:hidden">
-                            <div class="flex-shrink-0">
-                                @if(auth()->user()->avatar)
-                                <img class="h-8 w-8 rounded-full ring-2 ring-gray-200" src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}">
-                            @else
-                                <div class="h-8 w-8 rounded-full bg-primary-500 flex items-center justify-center ring-2 ring-gray-200">
-                                        <span class="text-white text-xs font-medium">
-                                            {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
-                                        </span>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-
-                        <!-- User Avatar and Name - Desktop -->
-                        <div class="hidden sm:flex items-center space-x-3">
-                            <div class="flex-shrink-0">
-                                @if(auth()->user()->avatar)
-                                <img class="h-9 w-9 lg:h-10 lg:w-10 rounded-full ring-2 ring-gray-200" src="{{ auth()->user()->avatar }}" alt="{{ auth()->user()->name }}">
-                            @else
-                                <div class="h-9 w-9 lg:h-10 lg:w-10 rounded-full bg-primary-500 flex items-center justify-center ring-2 ring-gray-200">
-                                    <span class="text-white text-sm font-medium">
-                                        {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
-                                    </span>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="hidden lg:block min-w-0">
-                            <p class="text-sm font-medium text-gray-900 truncate max-w-32">{{ auth()->user()->name }}</p>
-                            <p class="text-xs text-gray-500 truncate max-w-32">{{ auth()->user()->email }}</p>
-                        </div>
-                        </div>
-
-                        <!-- Dashboard Button -->
-                        <a href="{{ route('dashboard') }}" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            Dashboard
-                        </a>
-
-                        <!-- Logout Button -->
-                        <form method="POST" action="{{ route('logout') }}" class="hidden sm:inline">
-                            @csrf
-                            <button type="submit" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-3 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                Logout
-                            </button>
-                        </form>
-                    @else
-                        <!-- Login Button -->
-                        <a href="{{ route('login.page') }}" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            Login
-                        </a>
-                    @endauth
-                </div>
-            </div>
-        </div>
-    </nav>
+    <x-slot name="headerActions">
+        @auth
+            <!-- Dashboard Button -->
+            <a href="{{ route('dashboard') }}" class="bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
+                Dashboard
+            </a>
+        @endauth
+    </x-slot>
 
     <!-- Hero Section -->
-    <main class="max-w-7xl mx-auto py-12 sm:py-16 lg:py-20 px-3 sm:px-4 lg:px-6 xl:px-8">
+    <div class="max-w-7xl mx-auto py-12 sm:py-16 lg:py-20 px-3 sm:px-4 lg:px-6 xl:px-8">
         <div class="text-center">
             <!-- Hero Content -->
             <div class="max-w-4xl mx-auto">
@@ -347,17 +233,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                         </svg>
                     </a>
-                @else
-                    <a href="{{ route('login.page') }}" class="inline-flex items-center bg-primary-500 hover:bg-primary-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        Get Started Free
-                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                        </svg>
-                    </a>
                 @endauth
             </div>
         </section>
-    </main>
+    </div>
 
     <!-- Footer -->
     <footer class="bg-white border-t border-gray-200">
@@ -381,20 +260,21 @@
         </div>
     </footer>
 
-    <script>
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
-                }
+    @push('scripts')
+        <script>
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
             });
-        });
-    </script>
-</body>
-</html>
+        </script>
+    @endpush
+</x-layouts.app>

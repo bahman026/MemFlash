@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserLevelEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
+            $table->enum('level', array_column(UserLevelEnum::cases(), 'value'))->default(UserLevelEnum::STARTER->value);
             $table->string('category')->nullable(); // e.g., 'vocabulary', 'grammar', 'phrases'
             $table->string('language')->default('en'); // for future multi-language support
             $table->boolean('is_active')->default(true);

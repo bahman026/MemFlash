@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\LevelSelectionController;
 use App\Http\Controllers\StudyController;
 use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,12 @@ Route::get('/', function () {
 
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+
+// Level selection (requires authentication)
+Route::middleware([AuthMiddleware::class])->group(function () {
+    Route::get('/level-selection', [LevelSelectionController::class, 'show'])->name('level.selection');
+    Route::post('/level-selection', [LevelSelectionController::class, 'store'])->name('level.store');
+});
 
 Route::get('/login', function () {
     // If user is already authenticated, redirect to dashboard

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\UserLevelEnum;
 use App\Enums\UserStatusEnum;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -22,7 +23,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('avatar')->nullable();
             $table->unsignedTinyInteger('status')->default(UserStatusEnum::ACTIVE->value);
-            $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
+            $table->enum('level', array_column(UserLevelEnum::cases(), 'value'))->default(UserLevelEnum::STARTER->value);
             $table->json('preferences')->nullable();
             $table->rememberToken();
             $table->timestamps();

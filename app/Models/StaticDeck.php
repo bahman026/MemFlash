@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\UserLevelEnum;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property positive-int $id
  * @property string $name
  * @property string|null $description
- * @property string $level
+ * @property UserLevelEnum $level
  * @property string|null $category
  * @property string $language
  * @property bool $is_active
@@ -42,6 +43,7 @@ class StaticDeck extends Model
     protected function casts(): array
     {
         return [
+            'level' => UserLevelEnum::class,
             'is_active' => 'boolean',
             'metadata' => 'array',
         ];
@@ -58,7 +60,7 @@ class StaticDeck extends Model
     /**
      * Scope to get decks by level
      */
-    public function scopeByLevel($query, string $level)
+    public function scopeByLevel($query, UserLevelEnum $level)
     {
         return $query->where('level', $level);
     }

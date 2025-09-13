@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,36 +7,100 @@
     <link rel="icon" href="{{ asset('assets/images/favicon-300x300.png') }}" sizes="32x32">
     <link rel="icon" href="{{ asset('assets/images/favicon-150x150.png') }}" sizes="192x192">
 
-    @if(config('app.gtm_enabled'))
-        <!-- Google Tag Manager -->
-        <script>
-            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','GTM-N7S8ZBZG');
-        </script>
-        <!-- End Google Tag Manager -->
-    @endif
-
     {{-- seo related tags --}}
-    {{ $seo }}
+    {{ $seo ?? '' }}
+    @yield('seo')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Mobile-specific improvements */
+        @media (max-width: 640px) {
+            /* Improve touch targets */
+            button, a {
+                min-height: 44px;
+                min-width: 44px;
+            }
+
+            /* Better scrolling on mobile */
+            .overflow-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Prevent zoom on input focus */
+            input, textarea, select {
+                font-size: 16px;
+            }
+        }
+
+        /* Smooth transitions for all interactive elements */
+        button, a, .hover\:shadow-md:hover {
+            transition: all 0.2s ease-in-out;
+        }
+
+        /* Better focus states for accessibility */
+        button:focus, a:focus {
+            outline: 2px solid #0ea5e9;
+            outline-offset: 2px;
+        }
+    </style>
 </head>
 
-<body x-data="{ isMenuOpen: false }" :class="{'overflow-hidden': isMenuOpen}">
-    @if(config('app.gtm_enabled'))
-        <!-- Google Tag Manager (noscript) -->
-        <noscript>
-            <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N7S8ZBZG" height="0" width="0" style="display:none;visibility:hidden"></iframe>
-        </noscript>
-        <!-- End Google Tag Manager (noscript) -->
-    @endif
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <x-header 
+        :show-level="$showLevel ?? true" 
+        :show-user="$showUser ?? true"
+        :title="$headerTitle ?? 'MemFlash'"
+        :subtitle="$headerSubtitle ?? null"
+        :variant="$headerVariant ?? 'default'"
+    >
+        <x-slot name="actions">
+            {{ $headerActions ?? '' }}
+        </x-slot>
+    </x-header>
 
-    <main :class="{'blur duration-500': isMenuOpen, 'mt-mobile-header-height lg:mt-header-height': true}">{{ $slot }}
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6 xl:px-8">
+        {{ $slot ?? '' }}
+        @yield('content')
     </main>
 
-</body>
+    <!-- Footer (optional) -->
+    @if(isset($showFooter) && $showFooter)
+        <footer class="bg-white border-t border-gray-200 mt-auto">
+            <div class="max-w-7xl mx-auto py-6 px-3 sm:px-6 lg:px-8">
+                <div class="text-center text-sm text-gray-500">
+                    <p>&copy; {{ date('Y') }} MemFlash. All rights reserved.</p>
+                </div>
+            </div>
+        </footer>
+    @endif
 
+    <!-- Additional Scripts -->
+    @stack('scripts')
+</body>
 </html>

@@ -1,12 +1,9 @@
-@extends('components.layouts.dashboard')
-
-@section('seo')
-    <title>Study Session - {{ $deck->name }} - MemFlash</title>
-    <meta name="description" content="Study flashcards from {{ $deck->name }} deck using spaced repetition">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-@endsection
-
-@section('content')
+<x-layouts.deck :deck="$deck">
+    <x-slot name="seo">
+        <title>Study Session - {{ $deck->name }} - MemFlash</title>
+        <meta name="description" content="Study flashcards from {{ $deck->name }} deck using spaced repetition">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+    </x-slot>
 <div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
     <div class="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <!-- Header -->
@@ -268,6 +265,7 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
 class StudySession {
     constructor() {
@@ -542,4 +540,5 @@ document.addEventListener('DOMContentLoaded', () => {
     new StudySession();
 });
 </script>
-@endsection
+@endpush
+</x-layouts.deck>

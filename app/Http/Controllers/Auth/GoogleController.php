@@ -28,8 +28,12 @@ class GoogleController extends Controller
                     'name' => $googleUser->getName(),
                     'password' => bcrypt(uniqid()), // random password
                     'avatar' => $googleUser->getAvatar(),
+                    'level' => \App\Enums\UserLevelEnum::STARTER, // Default level
                 ]
             );
+
+            // Check if this is a new user (just created)
+            $isNewUser = $user->wasRecentlyCreated;
 
             // Update avatar if it's different (in case user changed their Google profile picture)
             if ($user->avatar !== $googleUser->getAvatar()) {
@@ -37,6 +41,11 @@ class GoogleController extends Controller
             }
 
             Auth::login($user, true); // true for "remember me"
+
+            // Redirect new users to level selection, existing users to dashboard
+            if ($isNewUser) {
+                return redirect()->route('level.selection');
+            }
 
             return redirect()->route('dashboard');
         } catch (\Exception $e) {

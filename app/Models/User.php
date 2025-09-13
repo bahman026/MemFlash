@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\UserLevelEnum;
 use App\Enums\UserStatusEnum;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
@@ -23,7 +24,7 @@ use Illuminate\Notifications\Notifiable;
  * @property string $password
  * @property string|null $avatar
  * @property UserStatusEnum $status
- * @property string $level
+ * @property UserLevelEnum $level
  * @property array|null $preferences
  * @property string|null $remember_token
  * @property Carbon|null $created_at
@@ -73,6 +74,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'status' => UserStatusEnum::class,
+            'level' => UserLevelEnum::class,
             'preferences' => 'array',
         ];
     }

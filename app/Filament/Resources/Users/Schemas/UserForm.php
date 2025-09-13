@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\UserLevelEnum;
 use App\Enums\UserStatusEnum;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -28,6 +29,10 @@ class UserForm
                 Select::make('status')
                     ->options(UserStatusEnum::class)
                     ->default(1)
+                    ->required(),
+                Select::make('level')
+                    ->options(UserLevelEnum::getOptions())
+                    ->default(UserLevelEnum::STARTER->value)
                     ->required(),
             ]);
     }
