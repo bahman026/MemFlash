@@ -43,6 +43,7 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::get('/decks/{deck}/edit', [DeckController::class, 'edit'])->name('decks.edit');
     Route::put('/decks/{deck}', [DeckController::class, 'update'])->name('decks.update');
     Route::delete('/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
+    Route::post('/decks/{deck}/reset', [DeckController::class, 'reset'])->name('decks.reset');
 
     // Study routes
     Route::get('/study/{deck}', [StudyController::class, 'start'])->name('study.start');

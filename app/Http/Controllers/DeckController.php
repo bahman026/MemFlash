@@ -180,4 +180,16 @@ class DeckController extends Controller
 
         return redirect()->route('dashboard')->with('success', "Deck '{$deckName}' deleted successfully!");
     }
+
+    /**
+     * Reset learning progress for the specified deck
+     */
+    public function reset(Deck $deck): RedirectResponse
+    {
+        $this->authorize('update', $deck);
+
+        $deck->resetLearningProgress();
+
+        return redirect()->route('dashboard')->with('success', "Learning progress for '{$deck->name}' has been reset! All cards will start from the beginning.");
+    }
 }

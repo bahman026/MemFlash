@@ -52,4 +52,17 @@ class Deck extends Model
     {
         return $this->hasMany(Card::class);
     }
+
+    /**
+     * Reset learning progress for all cards in this deck
+     * This will reset intervals, revised_at, and last_reviewed timestamps
+     */
+    public function resetLearningProgress(): void
+    {
+        $this->cards()->update([
+            'interval' => 1,
+            'revised_at' => null,
+            'last_reviewed' => null,
+        ]);
+    }
 }
