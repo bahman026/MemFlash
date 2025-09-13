@@ -33,6 +33,7 @@ class StaticDeck extends Model
         'name',
         'description',
         'level',
+        'lesson_number',
         'category',
         'language',
         'is_active',
@@ -50,11 +51,27 @@ class StaticDeck extends Model
     }
 
     /**
+     * Get all cards for this static deck
+     */
+    public function cards(): HasMany
+    {
+        return $this->hasMany(StaticCard::class);
+    }
+
+    /**
      * Get all user progress for this static deck
      */
     public function userProgress(): HasMany
     {
         return $this->hasMany(UserStaticDeckProgress::class);
+    }
+
+    /**
+     * Get user settings for this static deck
+     */
+    public function userSettings(): HasMany
+    {
+        return $this->hasMany(UserStaticDeckSetting::class);
     }
 
     /**
@@ -87,5 +104,18 @@ class StaticDeck extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
+     * Reset learning progress for all cards in this static deck
+     * This will reset intervals, revised_at, and last_reviewed timestamps
+     */
+    public function resetLearningProgress(): void
+    {
+        $this->cards()->update([
+            'interval' => 1,
+            'revised_at' => null,
+            'last_reviewed' => null,
+        ]);
     }
 }

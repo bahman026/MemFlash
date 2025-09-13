@@ -45,14 +45,10 @@ class StudyController extends Controller
                     $query->whereNull('revised_at')
                         ->orWhere('revised_at', '<=', now());
                 })
+                ->orderByRaw('CASE WHEN revised_at IS NULL THEN 0 ELSE 1 END')
                 ->orderBy('revised_at', 'asc') // New cards (null) first, then by due date
                 ->limit($newCardsPerDay)
                 ->get();
-
-            // Set revised_at to null for all cards we're about to show
-            $dueCards->each(function ($card) {
-                $card->update(['revised_at' => null]);
-            });
 
             $cards = $dueCards->map(function ($card) {
                 return [
@@ -99,30 +95,55 @@ class StudyController extends Controller
             $quality = $request->input('quality');
             $now = now();
 
-            // Only update revised_at if it's currently null (new card)
-            if (! $card->revised_at) {
-                switch ($quality) {
-                    case 0: // Again - tomorrow
-                        $card->revised_at = $now->copy()->addDay();
+            // Spaced repetition algorithm
+            if ($quality === 0) {
+                // Again - reset to 1 day
+                $card->update([
+                    'interval' => 1,
+                    'repetitions' => 0,
+                    'ease_factor' => max(1.3, $card->ease_factor - 0.2),
+                    'revised_at' => $now->addDay(),
+                    'last_reviewed' => $now,
+                ]);
+            } else {
+                // Hard, Good, Easy
+                $newInterval = $card->interval;
+                $newEaseFactor = $card->ease_factor;
+                $newRepetitions = $card->repetitions + 1;
 
-                        break;
-                    case 1: // Hard - two days later
-                        $card->revised_at = $now->copy()->addDays(2);
-
-                        break;
-                    case 2: // Good - 7 days later
-                        $card->revised_at = $now->copy()->addDays(7);
-
-                        break;
-                    case 3: // Easy - 10 days later
-                        $card->revised_at = $now->copy()->addDays(10);
-
-                        break;
+                if ($quality === 1) {
+                    // Hard
+                    $newInterval = max(1, $card->interval * 1.2);
+                    $newEaseFactor = max(1.3, $card->ease_factor - 0.15);
+                } elseif ($quality === 2) {
+                    // Good
+                    if ($card->repetitions === 0) {
+                        $newInterval = 1;
+                    } elseif ($card->repetitions === 1) {
+                        $newInterval = 6;
+                    } else {
+                        $newInterval = $card->interval * $card->ease_factor;
+                    }
+                } elseif ($quality === 3) {
+                    // Easy
+                    if ($card->repetitions === 0) {
+                        $newInterval = 4;
+                    } elseif ($card->repetitions === 1) {
+                        $newInterval = 10;
+                    } else {
+                        $newInterval = $card->interval * $card->ease_factor;
+                    }
+                    $newEaseFactor = $card->ease_factor + 0.15;
                 }
-            }
 
-            $card->last_reviewed = $now;
-            $card->save();
+                $card->update([
+                    'interval' => (int) $newInterval,
+                    'repetitions' => $newRepetitions,
+                    'ease_factor' => $newEaseFactor,
+                    'revised_at' => $now->addDays((int) $newInterval),
+                    'last_reviewed' => $now,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -162,30 +183,55 @@ class StudyController extends Controller
 
                 $quality = $update['quality'];
 
-                // Only update revised_at if it's currently null (new card)
-                if (! $card->revised_at) {
-                    switch ($quality) {
-                        case 0: // Again - tomorrow
-                            $card->revised_at = $now->copy()->addDay();
+                // Spaced repetition algorithm
+                if ($quality === 0) {
+                    // Again - reset to 1 day
+                    $card->update([
+                        'interval' => 1,
+                        'repetitions' => 0,
+                        'ease_factor' => max(1.3, $card->ease_factor - 0.2),
+                        'revised_at' => $now->addDay(),
+                        'last_reviewed' => $now,
+                    ]);
+                } else {
+                    // Hard, Good, Easy
+                    $newInterval = $card->interval;
+                    $newEaseFactor = $card->ease_factor;
+                    $newRepetitions = $card->repetitions + 1;
 
-                            break;
-                        case 1: // Hard - two days later
-                            $card->revised_at = $now->copy()->addDays(2);
-
-                            break;
-                        case 2: // Good - 7 days later
-                            $card->revised_at = $now->copy()->addDays(7);
-
-                            break;
-                        case 3: // Easy - 10 days later
-                            $card->revised_at = $now->copy()->addDays(10);
-
-                            break;
+                    if ($quality === 1) {
+                        // Hard
+                        $newInterval = max(1, $card->interval * 1.2);
+                        $newEaseFactor = max(1.3, $card->ease_factor - 0.15);
+                    } elseif ($quality === 2) {
+                        // Good
+                        if ($card->repetitions === 0) {
+                            $newInterval = 1;
+                        } elseif ($card->repetitions === 1) {
+                            $newInterval = 6;
+                        } else {
+                            $newInterval = $card->interval * $card->ease_factor;
+                        }
+                    } elseif ($quality === 3) {
+                        // Easy
+                        if ($card->repetitions === 0) {
+                            $newInterval = 4;
+                        } elseif ($card->repetitions === 1) {
+                            $newInterval = 10;
+                        } else {
+                            $newInterval = $card->interval * $card->ease_factor;
+                        }
+                        $newEaseFactor = $card->ease_factor + 0.15;
                     }
-                }
 
-                $card->last_reviewed = $now;
-                $card->save();
+                    $card->update([
+                        'interval' => (int) $newInterval,
+                        'repetitions' => $newRepetitions,
+                        'ease_factor' => $newEaseFactor,
+                        'revised_at' => $now->addDays((int) $newInterval),
+                        'last_reviewed' => $now,
+                    ]);
+                }
 
                 $updatedCards[] = [
                     'id' => $card->id,

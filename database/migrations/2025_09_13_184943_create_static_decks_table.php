@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->enum('level', array_column(UserLevelEnum::cases(), 'value'))->default(UserLevelEnum::STARTER->value);
+            $table->integer('lesson_number')->nullable(); // lesson number within the level
             $table->string('category')->nullable(); // e.g., 'vocabulary', 'grammar', 'phrases'
             $table->string('language')->default('en'); // for future multi-language support
             $table->boolean('is_active')->default(true);

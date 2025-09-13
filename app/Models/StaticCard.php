@@ -5,33 +5,33 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
-use Database\Factories\CardFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * App\Models\Card
+ * App\Models\StaticCard
  *
  * @property positive-int $id
- * @property positive-int $deck_id
+ * @property positive-int $static_deck_id
  * @property string $front
  * @property string $back
  * @property array|null $audio
- * @property int|null $interval
+ * @property int $interval
+ * @property float $ease_factor
+ * @property int $repetitions
  * @property Carbon|null $revised_at
  * @property Carbon|null $last_reviewed
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read Deck $deck
+ * @property-read StaticDeck $staticDeck
  */
-class Card extends Model
+class StaticCard extends Model
 {
-    /** @use HasFactory<CardFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'deck_id',
+        'static_deck_id',
         'front',
         'back',
         'audio',
@@ -42,11 +42,6 @@ class Card extends Model
         'last_reviewed',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -58,11 +53,11 @@ class Card extends Model
     }
 
     /**
-     * The deck this card belongs to
+     * The static deck this card belongs to
      */
-    public function deck(): BelongsTo
+    public function staticDeck(): BelongsTo
     {
-        return $this->belongsTo(Deck::class);
+        return $this->belongsTo(StaticDeck::class);
     }
 
     /**

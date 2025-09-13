@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\LevelSelectionController;
+use App\Http\Controllers\StaticDeckController;
 use App\Http\Controllers\StudyController;
 use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -57,4 +58,16 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::get('/api/study/{deck}/cards', [StudyController::class, 'getCards'])->name('study.cards');
     Route::post('/api/study/cards/{card}', [StudyController::class, 'updateCard'])->name('study.update-card');
     Route::post('/api/study/batch-update', [StudyController::class, 'batchUpdate'])->name('study.batch-update');
+
+    // Static deck routes
+    Route::get('/static-decks/{staticDeck}', [StaticDeckController::class, 'show'])->name('static-decks.show');
+    Route::get('/static-decks/{staticDeck}/study', [StaticDeckController::class, 'study'])->name('static-decks.study');
+    Route::get('/static-decks/{staticDeck}/preview', [StaticDeckController::class, 'preview'])->name('static-decks.preview');
+    Route::post('/static-decks/{staticDeck}/reset', [StaticDeckController::class, 'reset'])->name('static-decks.reset');
+    Route::post('/static-decks/{staticDeck}/cards-per-day', [StaticDeckController::class, 'updateCardsPerDay'])->name('static-decks.cards-per-day');
+    
+    // Static deck study API routes
+    Route::get('/api/static-study/{staticDeck}/cards', [StaticDeckController::class, 'getCards'])->name('static-study.cards');
+    Route::post('/api/static-study/cards/{card}', [StaticDeckController::class, 'updateCard'])->name('static-study.update-card');
+    Route::post('/api/static-study/batch-update', [StaticDeckController::class, 'batchUpdate'])->name('static-study.batch-update');
 });
