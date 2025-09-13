@@ -166,15 +166,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'lazy', 'back' => 'تنبل', 'pronunciation' => '/ˈleɪ.zi/'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 1');
 
-        $this->command->info('Lesson 1 vocabulary added.');
     }
 
     protected function seedLesson2($deck)
@@ -271,20 +264,12 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'go for a walk', 'back' => 'پیاده روی کردن', 'pronunciation' => '/goʊ fɔr ə wɔk/'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 2');
 
-        $this->command->info('Lesson 2 vocabulary added.');
     }
 
     protected function seedLesson3($deck)
     {
-        // این متد لغات درس ۳ را به پایگاه داده اضافه می کند.
         $vocabulary = [
             ['front' => 'check-in', 'back' => 'محل پذیرش (هتل، فرودگاه و...)', 'pronunciation' => '/ʧɛk-ɪn /'],
             ['front' => 'Wi-Fi', 'back' => 'وای-فای', 'pronunciation' => '/ˈwʌɪfʌɪ /'],
@@ -348,15 +333,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'something', 'back' => 'چیزی', 'pronunciation' => '/ˈsʌm.θɪŋ /'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 3');
 
-        $this->command->info('Lesson 3 vocabulary added.');
     }
 
     protected function seedLesson4($deck)
@@ -458,15 +436,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'barefoot', 'back' => 'پابرهنه', 'pronunciation' => '/ˈbɛrˌfʊt/'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 4');
 
-        $this->command->info('Lesson 4 vocabulary added.');
     }
 
     protected function seedLesson5($deck)
@@ -547,15 +518,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'several', 'back' => 'چند', 'pronunciation' => '/ˈsev.rəl /'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 5');
 
-        $this->command->info('Lesson 5 vocabulary added.');
     }
 
     protected function seedLesson6($deck)
@@ -626,16 +590,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'lose', 'back' => 'گم کردن', 'pronunciation' => '/luːz/'],
             ['front' => 'buy', 'back' => 'خریدن', 'pronunciation' => '/baɪ/'],
         ];
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 6');
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
-
-        $this->command->info('Lesson 6 vocabulary added.');
     }
 
     protected function seedLesson7($deck)
@@ -712,15 +668,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'drug', 'back' => 'دارو', 'pronunciation' => '/drʌg /'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 7');
 
-        $this->command->info('Lesson 7 vocabulary added.');
     }
 
     protected function seedLesson8($deck)
@@ -794,15 +743,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => "change one's mind", 'back' => 'نظر خود را تغییر دادن', 'pronunciation' => '/tʃˈeɪndʒ wˈʌnz mˈaɪnd/'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 8');
 
-        $this->command->info('Lesson 8 vocabulary added.');
     }
 
     protected function seedLesson9($deck)
@@ -899,15 +841,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'have children', 'back' => 'بچه‌دار شدن', 'pronunciation' => '/hæv ˈʧɪldrən /'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 9');
 
-        $this->command->info('Lesson 9 vocabulary added.');
     }
 
     protected function seedLesson10($deck)
@@ -962,16 +897,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'dissatisfied', 'back' => 'ناراضی', 'pronunciation' => '/dɪˈsætəˌsfaɪd/'],
             ['front' => 'hair dryer', 'back' => 'سشوار', 'pronunciation' => '/ˈherˌ drɑɪ.ər/'],
         ];
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 10');
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
-
-        $this->command->info('Lesson 10 vocabulary added.');
     }
 
     protected function seedLesson11($deck)
@@ -1084,16 +1011,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'tights', 'back' => 'جوراب‌شلواری', 'pronunciation' => '/taɪts /'],
             ['front' => 'come on', 'back' => 'بی‌خیال!', 'pronunciation' => '/kʌm ɑn /'],
         ];
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 11');
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
-
-        $this->command->info('Lesson 11 vocabulary added.');
     }
 
     protected function seedLesson12($deck)
@@ -1120,15 +1039,8 @@ class StaticCardFile2Seeder extends Seeder
             ['front' => 'net', 'back' => 'تور', 'pronunciation' => '/nɛt /'],
         ];
 
-        foreach ($vocabulary as $item) {
-            $deck->vocabulary()->create([
-                'front' => $item['front'],
-                'back' => $item['back'],
-                'pronunciation' => $item['pronunciation'],
-            ]);
-        }
+        $this->seedVocabulary($deck, $vocabulary, 'American English File 2 - Lesson 12');
 
-        $this->command->info('Lesson 12 vocabulary added.');
     }
 
     private function seedVocabulary($deck, $vocabulary, $lessonName)

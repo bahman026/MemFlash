@@ -536,28 +536,7 @@ class StaticDeckSeeder extends Seeder
                     'difficulty' => 'intermediate',
                 ],
             ],
-            [
-                'name' => 'American English File 3 - Lesson 11',
-                'description' => 'Advanced articles, complex noun phrases for intermediate learners.',
-                'level' => UserLevelEnum::INTERMEDIATE,
-                'lesson_number' => 11,
-                'is_active' => true,
-                'metadata' => [
-                    'total_words' => 155,
-                    'difficulty' => 'intermediate',
-                ],
-            ],
-            [
-                'name' => 'American English File 3 - Lesson 12',
-                'description' => 'Review and consolidation of intermediate grammar and vocabulary.',
-                'level' => UserLevelEnum::INTERMEDIATE,
-                'lesson_number' => 12,
-                'is_active' => true,
-                'metadata' => [
-                    'total_words' => 140,
-                    'difficulty' => 'intermediate',
-                ],
-            ],
+
             // American English File 4 - Upper-Intermediate Level
             [
                 'name' => 'American English File 4 - Lesson 1',
@@ -669,28 +648,7 @@ class StaticDeckSeeder extends Seeder
                     'difficulty' => 'upper-intermediate',
                 ],
             ],
-            [
-                'name' => 'American English File 4 - Lesson 11',
-                'description' => 'Advanced articles, complex academic language for upper-intermediate learners.',
-                'level' => UserLevelEnum::UPPER_INTERMEDIATE,
-                'lesson_number' => 11,
-                'is_active' => true,
-                'metadata' => [
-                    'total_words' => 185,
-                    'difficulty' => 'upper-intermediate',
-                ],
-            ],
-            [
-                'name' => 'American English File 4 - Lesson 12',
-                'description' => 'Review and consolidation of upper-intermediate grammar and vocabulary.',
-                'level' => UserLevelEnum::UPPER_INTERMEDIATE,
-                'lesson_number' => 12,
-                'is_active' => true,
-                'metadata' => [
-                    'total_words' => 170,
-                    'difficulty' => 'upper-intermediate',
-                ],
-            ],
+
             // American English File 5 - Advanced Level
             [
                 'name' => 'American English File 5 - Lesson 1',
@@ -802,28 +760,7 @@ class StaticDeckSeeder extends Seeder
                     'difficulty' => 'advanced',
                 ],
             ],
-            [
-                'name' => 'American English File 5 - Lesson 11',
-                'description' => 'Mastery of articles, complex academic and professional discourse for advanced learners.',
-                'level' => UserLevelEnum::ADVANCED,
-                'lesson_number' => 11,
-                'is_active' => true,
-                'metadata' => [
-                    'total_words' => 225,
-                    'difficulty' => 'advanced',
-                ],
-            ],
-            [
-                'name' => 'American English File 5 - Lesson 12',
-                'description' => 'Mastery review and consolidation of advanced grammar and vocabulary.',
-                'level' => UserLevelEnum::ADVANCED,
-                'lesson_number' => 12,
-                'is_active' => true,
-                'metadata' => [
-                    'total_words' => 200,
-                    'difficulty' => 'advanced',
-                ],
-            ],
+
         ];
 
         foreach ($decks as $deckData) {

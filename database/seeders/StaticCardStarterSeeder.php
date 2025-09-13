@@ -100,9 +100,96 @@ class StaticCardStarterSeeder extends Seeder
     private function seedLesson1($deck)
     {
         $vocabulary = [
-            ['front' => 'ten', 'back' => 'ده', 'pronunciation' => '/ten/'],
-            ['front' => 'spell', 'back' => 'هجی کردن', 'pronunciation' => '/spel/'],
-            ['front' => 'Portugal', 'back' => 'پرتغال (کشور)', 'pronunciation' => '/ˈpɔrʧəgəl/'],
+            ['front' => 'ten', 'back' => 'ده', 'pronunciation' => '/ten /'],
+            ['front' => 'spell', 'back' => 'هجی کردن', 'pronunciation' => '/spel /'],
+            ['front' => 'Portugal', 'back' => 'پرتغال (کشور)', 'pronunciation' => '/ˈpɔrʧəgəl /'],
+            ['front' => 'repeat', 'back' => 'تکرار کردن', 'pronunciation' => '/rəˈpiːt /'],
+            ['front' => 'Saudi Arabia', 'back' => 'عربستان سعودی', 'pronunciation' => '/ˈsɔdi əˈreɪbiə /'],
+            ['front' => 'one', 'back' => 'یک', 'pronunciation' => '/wʌn /'],
+            ['front' => 'Spain', 'back' => 'اسپانیا', 'pronunciation' => '/speɪn /'],
+            ['front' => 'English', 'back' => 'زبان انگلیسی', 'pronunciation' => '/ˈɪŋglɪʃ /'],
+            ['front' => 'hello', 'back' => 'سلام', 'pronunciation' => '/heˈloʊ /'],
+            ['front' => 'coffee', 'back' => 'قهوه', 'pronunciation' => '/ˈkɑːfi /'],
+            ['front' => 'Vietnam', 'back' => 'ویتنام', 'pronunciation' => '/ˌvjetˈnæm /'],
+            ['front' => 'country', 'back' => 'کشور', 'pronunciation' => '/ˈkʌntri /'],
+            ['front' => 'paper', 'back' => 'کاغذ', 'pronunciation' => '/ˈpeɪ.pər /'],
+            ['front' => 'hi', 'back' => 'سلام', 'pronunciation' => '/hɑɪ /'],
+            ['front' => 'understand', 'back' => 'فهمیدن', 'pronunciation' => '/ˌʌndərˈstænd /'],
+            ['front' => 'two', 'back' => 'دو', 'pronunciation' => '/tuː /'],
+            ['front' => 'United States of America', 'back' => 'ایالات متحده امریکا', 'pronunciation' => '/juˈnaɪtəd steɪts ʌv əˈmɛrəkə /'],
+            ['front' => 'pen', 'back' => 'خودکار', 'pronunciation' => '/pen /'],
+            ['front' => 'three', 'back' => 'سه', 'pronunciation' => '/θri /'],
+            ['front' => 'four', 'back' => 'چهار', 'pronunciation' => '/fɔːr /'],
+            ['front' => 'Nice to meet you.', 'back' => 'از آشنایی با تو خوشوقتم.', 'pronunciation' => '/naɪs tu mit ju. /'],
+            ['front' => 'five', 'back' => 'پنج', 'pronunciation' => '/fɑɪv /'],
+            ['front' => 'where', 'back' => 'کجا', 'pronunciation' => '/wer /'],
+            ['front' => 'he', 'back' => '[ضمیر سوم شخص مفرد مذکر]', 'pronunciation' => '/hiː /'],
+            ['front' => 'please', 'back' => 'لطفاً', 'pronunciation' => '/pliːz /'],
+            ['front' => 'goodbye', 'back' => 'خداحافظ', 'pronunciation' => '/ˌgʊdˈbɑɪ /'],
+            ['front' => 'she', 'back' => '[ضمیر سوم شخص مفرد مونث]', 'pronunciation' => '/ʃiː /'],
+            ['front' => 'stand up', 'back' => 'بلند شدن', 'pronunciation' => '/stænd ʌp /'],
+            ['front' => 'six', 'back' => 'شش', 'pronunciation' => '/sɪks /'],
+            ['front' => 'seven', 'back' => 'هفت', 'pronunciation' => '/ˈsevən /'],
+            ['front' => 'it', 'back' => '[ضمیر سوم شخص مفرد اجسام]', 'pronunciation' => '/ɪt /'],
+            ['front' => 'excuse me', 'back' => 'ببخشید', 'pronunciation' => '/ɪkˈskjuːz miː /'],
+            ['front' => 'sit down', 'back' => 'نشستن', 'pronunciation' => '/sɪt daʊn /'],
+            ['front' => 'Monday', 'back' => 'دوشنبه', 'pronunciation' => '/ˈmʌndeɪ /'],
+            ['front' => 'see you soon', 'back' => 'به زودی می‌بینمت', 'pronunciation' => '/si ju sun /'],
+            ['front' => 'be', 'back' => '[فعل کمکی]', 'pronunciation' => '/biː /'],
+            ['front' => 'eight', 'back' => 'هشت', 'pronunciation' => '/eɪt /'],
+            ['front' => 'book', 'back' => 'کتاب', 'pronunciation' => '/bʊk /'],
+            ['front' => 'nine', 'back' => 'نه', 'pronunciation' => '/nɑɪn /'],
+            ['front' => 'zero', 'back' => 'صفر', 'pronunciation' => '/ˈzɪroʊ /'],
+            ['front' => 'from', 'back' => 'اهل', 'pronunciation' => '/frʌm /'],
+            ['front' => 'sorry', 'back' => 'متاسف', 'pronunciation' => '/ˈsɑr.i /'],
+            ['front' => 'Tuesday', 'back' => 'سه‌شنبه', 'pronunciation' => '/ˈtjuːzdeɪ /'],
+            ['front' => 'ten', 'back' => 'ده', 'pronunciation' => '/ten /'],
+            ['front' => 'week', 'back' => 'هفته', 'pronunciation' => '/wiːk /'],
+            ['front' => 'Wednesday', 'back' => 'چهارشنبه', 'pronunciation' => '/ˈwenzdeɪ /'],
+            ['front' => 'window', 'back' => 'پنجره', 'pronunciation' => '/ˈwɪndoʊ /'],
+            ['front' => 'one', 'back' => 'یک', 'pronunciation' => '/wʌn /'],
+            ['front' => 'Brazil', 'back' => 'برزیل', 'pronunciation' => '/brəˈzɪl /'],
+            ['front' => 'I', 'back' => 'من', 'pronunciation' => '/ɑɪ /'],
+            ['front' => 'two', 'back' => 'دو', 'pronunciation' => '/tuː /'],
+            ['front' => 'look at', 'back' => 'نگاه کردن به', 'pronunciation' => '/lʊk æt /'],
+            ['front' => 'Thursday', 'back' => 'پنجشنبه', 'pronunciation' => '/ˈθɜrzdeɪ /'],
+            ['front' => 'number', 'back' => 'عدد', 'pronunciation' => '/ˈnʌm.bər /'],
+            ['front' => 'you', 'back' => '[ضمیر دوم شخص فاعلی مفرد و جمع]', 'pronunciation' => '/juː /'],
+            ['front' => 'three', 'back' => 'سه', 'pronunciation' => '/θri /'],
+            ['front' => 'Friday', 'back' => 'جمعه', 'pronunciation' => '/ˈfrɑɪdeɪ /'],
+            ['front' => 'Canada', 'back' => 'کانادا', 'pronunciation' => '/ˈkænədə /'],
+            ['front' => 'chair', 'back' => 'صندلی', 'pronunciation' => '/tʃer /'],
+            ['front' => 'open', 'back' => 'باز کردن', 'pronunciation' => '/ˈoʊ.pən /'],
+            ['front' => 'Chile', 'back' => 'شیلی', 'pronunciation' => '/ˈtʃɪli /'],
+            ['front' => 'coat', 'back' => 'پالتو', 'pronunciation' => '/koʊt /'],
+            ['front' => 'Saturday', 'back' => 'شنبه', 'pronunciation' => '/ˈsætərdeɪ /'],
+            ['front' => 'classroom', 'back' => 'کلاس', 'pronunciation' => '/ˈklæs.ruːm /'],
+            ['front' => 'page', 'back' => 'صفحه', 'pronunciation' => '/peɪdʒ /'],
+            ['front' => 'what', 'back' => 'چی', 'pronunciation' => '/wɒt /'],
+            ['front' => 'four', 'back' => 'چهار', 'pronunciation' => '/fɔːr /'],
+            ['front' => 'Sunday', 'back' => 'یکشنبه', 'pronunciation' => '/ˈsʌndeɪ /'],
+            ['front' => 'China', 'back' => 'چین', 'pronunciation' => '/ˈʧaɪnə /'],
+            ['front' => 'England', 'back' => 'انگلستان', 'pronunciation' => '/ˈɪŋglənd /'],
+            ['front' => 'five', 'back' => 'پنج', 'pronunciation' => '/fɑɪv /'],
+            ['front' => 'table', 'back' => 'میز', 'pronunciation' => '/ˈteɪbəl /'],
+            ['front' => 'board', 'back' => 'تخته', 'pronunciation' => '/bɔrd /'],
+            ['front' => 'Japan', 'back' => 'ژاپن', 'pronunciation' => '/ʤəˈpæn /'],
+            ['front' => 'six', 'back' => 'شش', 'pronunciation' => '/sɪks /'],
+            ['front' => 'go', 'back' => 'رفتن', 'pronunciation' => '/goʊ /'],
+            ['front' => 'UK', 'back' => 'پادشاهی متحد بریتانیا', 'pronunciation' => '/jukeɪ /'],
+            ['front' => 'laptop', 'back' => 'لپ‌تاپ', 'pronunciation' => '/ˈlæptɑp /'],
+            ['front' => 'seven', 'back' => 'هفت', 'pronunciation' => '/ˈsevən /'],
+            ['front' => 'Korea', 'back' => 'کشور کره', 'pronunciation' => '/kɔˈriə /'],
+            ['front' => 'close', 'back' => 'بستن', 'pronunciation' => '/kloʊz /'],
+            ['front' => 'eight', 'back' => 'هشت', 'pronunciation' => '/eɪt /'],
+            ['front' => 'zero', 'back' => 'صفر', 'pronunciation' => '/ˈzɪroʊ /'],
+            ['front' => 'Mexico', 'back' => 'مکزیک', 'pronunciation' => '/ˈmɛksəˌkoʊ /'],
+            ['front' => 'door', 'back' => 'در', 'pronunciation' => '/dɔːr /'],
+            ['front' => 'bye', 'back' => 'خداحافظ', 'pronunciation' => '/bɑɪ /'],
+            ['front' => 'US', 'back' => 'ایالات متحده (آمریکا)', 'pronunciation' => '/ˌjuː ˈes /'],
+            ['front' => 'nine', 'back' => 'نه', 'pronunciation' => '/nɑɪn /'],
+            ['front' => 'Peru', 'back' => 'پرو', 'pronunciation' => '/pəˈruː /'],
+            ['front' => 'dictionary', 'back' => 'واژه‌نامه', 'pronunciation' => '/ˈdɪkʃəneri /'],
         ];
 
         $this->seedVocabulary($deck, $vocabulary, 'Lesson 1');
@@ -676,41 +763,6 @@ class StaticCardStarterSeeder extends Seeder
         $this->seedVocabulary($deck, $vocabulary, 'Lesson 10');
     }
 
-    private function seedLesson12($deck)
-    {
-        $vocabulary = [
-            ['front' => 'going to', 'back' => 'قصد (انجام کاری را) داشتن', 'pronunciation' => '/ˈgoʊɪŋ tu/'],
-            ['front' => 'make friends', 'back' => 'دوست شدن', 'pronunciation' => '/meɪk frɛndz/'],
-            ['front' => 'e-mail address', 'back' => 'آدرس ایمیل', 'pronunciation' => '/i-meɪl ˈæˌdrɛs/'],
-            ['front' => 'homework', 'back' => 'تکلیف منزل', 'pronunciation' => '/ˈhoʊmwɜːrk/'],
-            ['front' => 'group', 'back' => 'گروه', 'pronunciation' => '/gruːp/'],
-            ['front' => 'tomorrow', 'back' => 'فردا', 'pronunciation' => '/təˈmɑˌroʊ/'],
-            ['front' => 'question', 'back' => 'سوال', 'pronunciation' => '/ˈkwes.tʃən/'],
-            ['front' => 'soccer', 'back' => 'فوتبال', 'pronunciation' => '/ˈsɑːkər/'],
-            ['front' => 'next', 'back' => 'بعد', 'pronunciation' => '/nekst/'],
-            ['front' => 'computer game', 'back' => 'بازی رایانه‌ای', 'pronunciation' => '/kəmˈpjutər geɪm/'],
-            ['front' => 'year', 'back' => 'سال', 'pronunciation' => '/jɪr/'],
-            ['front' => 'take', 'back' => 'طول کشیدن', 'pronunciation' => '/teɪk/'],
-            ['front' => 'night', 'back' => 'شب', 'pronunciation' => '/nɑɪt/'],
-            ['front' => 'now', 'back' => 'الان', 'pronunciation' => '/nɑʊ/'],
-            ['front' => 'future', 'back' => 'آینده', 'pronunciation' => '/ˈfjuː.tʃər/'],
-            ['front' => 'problem', 'back' => 'مشکل', 'pronunciation' => '/ˈprɑb.ləm/'],
-            ['front' => 'weekend', 'back' => 'آخر هفته', 'pronunciation' => '/ˌwiːkˈend/'],
-            ['front' => 'come back', 'back' => 'برگشتن', 'pronunciation' => '/kʌm bæk/'],
-            ['front' => 'tonight', 'back' => 'امشب', 'pronunciation' => '/təˈnɑɪt/'],
-            ['front' => 'start', 'back' => 'آغاز', 'pronunciation' => '/stɑrt/'],
-            ['front' => 'finish', 'back' => 'پایان', 'pronunciation' => '/ˈfɪn.ɪʃ/'],
-            ['front' => 'write', 'back' => 'نوشتن', 'pronunciation' => '/raɪt/'],
-            ['front' => 'adventure', 'back' => 'ماجراجویی', 'pronunciation' => '/ədˈven.tʃər/'],
-            ['front' => 'present', 'back' => 'زمان حال (دستور زبان)', 'pronunciation' => '/ˈprez.ənt/'],
-            ['front' => 'lifetime', 'back' => 'عمر', 'pronunciation' => '/ˈlɑɪf.tɑɪm/'],
-            ['front' => 'past', 'back' => 'گذشته (دستور زبان)', 'pronunciation' => '/pæst/'],
-            ['front' => 'camp', 'back' => 'اردو زدن', 'pronunciation' => '/kæmp/'],
-        ];
-
-        $this->seedVocabulary($deck, $vocabulary, 'Lesson 12');
-    }
-
     protected function seedLesson11($deck)
     {
         $vocabulary = [
@@ -767,6 +819,41 @@ class StaticCardStarterSeeder extends Seeder
         ];
 
         $this->seedVocabulary($deck, $vocabulary, 'Lesson 11');
+    }
+
+    private function seedLesson12($deck)
+    {
+        $vocabulary = [
+            ['front' => 'going to', 'back' => 'قصد (انجام کاری را) داشتن', 'pronunciation' => '/ˈgoʊɪŋ tu/'],
+            ['front' => 'make friends', 'back' => 'دوست شدن', 'pronunciation' => '/meɪk frɛndz/'],
+            ['front' => 'e-mail address', 'back' => 'آدرس ایمیل', 'pronunciation' => '/i-meɪl ˈæˌdrɛs/'],
+            ['front' => 'homework', 'back' => 'تکلیف منزل', 'pronunciation' => '/ˈhoʊmwɜːrk/'],
+            ['front' => 'group', 'back' => 'گروه', 'pronunciation' => '/gruːp/'],
+            ['front' => 'tomorrow', 'back' => 'فردا', 'pronunciation' => '/təˈmɑˌroʊ/'],
+            ['front' => 'question', 'back' => 'سوال', 'pronunciation' => '/ˈkwes.tʃən/'],
+            ['front' => 'soccer', 'back' => 'فوتبال', 'pronunciation' => '/ˈsɑːkər/'],
+            ['front' => 'next', 'back' => 'بعد', 'pronunciation' => '/nekst/'],
+            ['front' => 'computer game', 'back' => 'بازی رایانه‌ای', 'pronunciation' => '/kəmˈpjutər geɪm/'],
+            ['front' => 'year', 'back' => 'سال', 'pronunciation' => '/jɪr/'],
+            ['front' => 'take', 'back' => 'طول کشیدن', 'pronunciation' => '/teɪk/'],
+            ['front' => 'night', 'back' => 'شب', 'pronunciation' => '/nɑɪt/'],
+            ['front' => 'now', 'back' => 'الان', 'pronunciation' => '/nɑʊ/'],
+            ['front' => 'future', 'back' => 'آینده', 'pronunciation' => '/ˈfjuː.tʃər/'],
+            ['front' => 'problem', 'back' => 'مشکل', 'pronunciation' => '/ˈprɑb.ləm/'],
+            ['front' => 'weekend', 'back' => 'آخر هفته', 'pronunciation' => '/ˌwiːkˈend/'],
+            ['front' => 'come back', 'back' => 'برگشتن', 'pronunciation' => '/kʌm bæk/'],
+            ['front' => 'tonight', 'back' => 'امشب', 'pronunciation' => '/təˈnɑɪt/'],
+            ['front' => 'start', 'back' => 'آغاز', 'pronunciation' => '/stɑrt/'],
+            ['front' => 'finish', 'back' => 'پایان', 'pronunciation' => '/ˈfɪn.ɪʃ/'],
+            ['front' => 'write', 'back' => 'نوشتن', 'pronunciation' => '/raɪt/'],
+            ['front' => 'adventure', 'back' => 'ماجراجویی', 'pronunciation' => '/ədˈven.tʃər/'],
+            ['front' => 'present', 'back' => 'زمان حال (دستور زبان)', 'pronunciation' => '/ˈprez.ənt/'],
+            ['front' => 'lifetime', 'back' => 'عمر', 'pronunciation' => '/ˈlɑɪf.tɑɪm/'],
+            ['front' => 'past', 'back' => 'گذشته (دستور زبان)', 'pronunciation' => '/pæst/'],
+            ['front' => 'camp', 'back' => 'اردو زدن', 'pronunciation' => '/kæmp/'],
+        ];
+
+        $this->seedVocabulary($deck, $vocabulary, 'Lesson 12');
     }
 
     private function seedVocabulary($deck, $vocabulary, $lessonName)
