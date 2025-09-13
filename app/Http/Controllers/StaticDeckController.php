@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Models\StaticDeck;
 use App\Models\StaticCard;
-use App\Models\UserStaticDeckSetting;
+use App\Models\StaticDeck;
 use App\Models\UserStaticDeckProgress;
-use Illuminate\Http\Request;
-use Illuminate\Http\RedirectResponse;
+use App\Models\UserStaticDeckSetting;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class StaticDeckController extends Controller
 {
@@ -20,15 +20,15 @@ class StaticDeckController extends Controller
     public function reset(StaticDeck $staticDeck): RedirectResponse
     {
         $user = auth()->user();
-        
+
         // Reset static cards learning progress
         $staticDeck->resetLearningProgress();
-        
+
         // Reset user progress
         $userProgress = UserStaticDeckProgress::where('user_id', $user->id)
             ->where('static_deck_id', $staticDeck->id)
             ->first();
-            
+
         if ($userProgress) {
             $userProgress->update([
                 'cards_studied' => 0,
@@ -46,7 +46,7 @@ class StaticDeckController extends Controller
     public function show(StaticDeck $staticDeck)
     {
         $staticDeck->load('cards');
-        
+
         return view('static-decks.show', compact('staticDeck'));
     }
 
@@ -57,14 +57,14 @@ class StaticDeckController extends Controller
     {
         $user = auth()->user();
         $staticDeck->load('cards');
-        
+
         // Get user's cards per day setting for this deck
         $userSetting = UserStaticDeckSetting::where('user_id', $user->id)
             ->where('static_deck_id', $staticDeck->id)
             ->first();
-        
+
         $cardsPerDay = $userSetting ? $userSetting->cards_per_day : 10;
-        
+
         // Get cards that are due for review
         $dueCards = $staticDeck->cards()
             ->where(function ($query) {
@@ -89,7 +89,7 @@ class StaticDeckController extends Controller
     public function preview(StaticDeck $staticDeck)
     {
         $staticDeck->load('cards');
-        
+
         return view('static-decks.preview', compact('staticDeck'));
     }
 
@@ -103,7 +103,7 @@ class StaticDeckController extends Controller
         ]);
 
         $user = auth()->user();
-        
+
         $setting = UserStaticDeckSetting::firstOrCreate(
             [
                 'user_id' => $user->id,
@@ -144,7 +144,7 @@ class StaticDeckController extends Controller
                     'id' => $staticDeck->id,
                     'name' => $staticDeck->name,
                     'cards_loaded' => $dueCards->count(),
-                ]
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to load cards'], 500);
@@ -163,7 +163,7 @@ class StaticDeckController extends Controller
         try {
             $user = auth()->user();
             $quality = $request->quality;
-            
+
             // Simple spaced repetition algorithm
             if ($quality === 0) {
                 // Again - reset to 1 day
@@ -262,10 +262,10 @@ class StaticDeckController extends Controller
                 if ($card) {
                     $staticDeckId = $card->static_deck_id;
                     $quality = $update['quality'];
-                    
+
                     // Track which cards were studied
                     $studiedCardIds[] = $card->id;
-                    
+
                     // Simple spaced repetition algorithm
                     if ($quality === 0) {
                         // Again - reset to 1 day
@@ -336,7 +336,7 @@ class StaticDeckController extends Controller
 
                     // Count unique cards studied in this session
                     $uniqueCardsStudied = count(array_unique($studiedCardIds));
-                    
+
                     // Update progress
                     $userProgress->updateProgress(
                         $userProgress->cards_studied + $uniqueCardsStudied,

@@ -106,7 +106,7 @@ class UserStaticDeckProgress extends Model
         ]);
 
         // Auto-complete if all cards are studied
-        if ($cardsStudied >= $this->total_cards && !$this->isCompleted()) {
+        if ($cardsStudied >= $this->total_cards && ! $this->isCompleted()) {
             $this->markAsCompleted();
         }
     }

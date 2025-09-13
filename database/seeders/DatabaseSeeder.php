@@ -19,7 +19,12 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminSeeder::class,
             StaticDeckSeeder::class,
-            StaticCardSeeder::class,
+            StaticCardStarterSeeder::class,
+            StaticCardFile1Seeder::class,
+            StaticCardFile2Seeder::class,
+            StaticCardFile3Seeder::class,
+            StaticCardFile4Seeder::class,
+            StaticCardFile5Seeder::class,
         ]);
     }
 }

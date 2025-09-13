@@ -65,7 +65,7 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::get('/static-decks/{staticDeck}/preview', [StaticDeckController::class, 'preview'])->name('static-decks.preview');
     Route::post('/static-decks/{staticDeck}/reset', [StaticDeckController::class, 'reset'])->name('static-decks.reset');
     Route::post('/static-decks/{staticDeck}/cards-per-day', [StaticDeckController::class, 'updateCardsPerDay'])->name('static-decks.cards-per-day');
-    
+
     // Static deck study API routes
     Route::get('/api/static-study/{staticDeck}/cards', [StaticDeckController::class, 'getCards'])->name('static-study.cards');
     Route::post('/api/static-study/cards/{card}', [StaticDeckController::class, 'updateCard'])->name('static-study.update-card');

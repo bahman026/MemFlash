@@ -18,7 +18,7 @@ enum UserLevelEnum: string
      */
     public function getDisplayName(): string
     {
-        return match($this) {
+        return match ($this) {
             self::STARTER => 'American English File Starter',
             self::ELEMENTARY => 'American English File 1',
             self::PRE_INTERMEDIATE => 'American English File 2',
@@ -33,7 +33,7 @@ enum UserLevelEnum: string
      */
     public function getNumericValue(): int
     {
-        return match($this) {
+        return match ($this) {
             self::STARTER => 0,
             self::ELEMENTARY => 1,
             self::PRE_INTERMEDIATE => 2,
@@ -52,6 +52,7 @@ enum UserLevelEnum: string
         foreach (self::cases() as $level) {
             $options[$level->value] = $level->getDisplayName();
         }
+
         return $options;
     }
 
@@ -60,7 +61,7 @@ enum UserLevelEnum: string
      */
     public function getNextLevel(): ?self
     {
-        return match($this) {
+        return match ($this) {
             self::STARTER => self::ELEMENTARY,
             self::ELEMENTARY => self::PRE_INTERMEDIATE,
             self::PRE_INTERMEDIATE => self::INTERMEDIATE,
@@ -75,7 +76,7 @@ enum UserLevelEnum: string
      */
     public function getPreviousLevel(): ?self
     {
-        return match($this) {
+        return match ($this) {
             self::STARTER => null,
             self::ELEMENTARY => self::STARTER,
             self::PRE_INTERMEDIATE => self::ELEMENTARY,

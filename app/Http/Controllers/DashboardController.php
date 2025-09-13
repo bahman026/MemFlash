@@ -6,8 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Deck;
 use App\Models\StaticDeck;
-use App\Models\UserStaticDeckSetting;
 use App\Models\UserStaticDeckProgress;
+use App\Models\UserStaticDeckSetting;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -33,7 +33,7 @@ class DashboardController extends Controller
                 },
                 'userProgress' => function ($query) use ($user) {
                     $query->where('user_id', $user->id);
-                }
+                },
             ])
             ->orderBy('lesson_number')
             ->get();
@@ -74,7 +74,7 @@ class DashboardController extends Controller
                 },
                 'userProgress' => function ($query) use ($user) {
                     $query->where('user_id', $user->id);
-                }
+                },
             ])
             ->orderBy('lesson_number')
             ->get();

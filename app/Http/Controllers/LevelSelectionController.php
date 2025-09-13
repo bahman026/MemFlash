@@ -19,7 +19,7 @@ class LevelSelectionController extends Controller
         $levels = UserLevelEnum::cases();
         $currentLevel = auth()->user()->level;
         $isChangingLevel = true; // Always show as changing level since they're already logged in
-        
+
         return view('auth.level-selection', compact('levels', 'currentLevel', 'isChangingLevel'));
     }
 
