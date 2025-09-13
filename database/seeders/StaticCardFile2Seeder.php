@@ -20,6 +20,7 @@ class StaticCardFile2Seeder extends Seeder
 
         if ($preIntermediateDecks->isEmpty()) {
             $this->command->error('No Pre-intermediate level static decks found. Please run StaticDeckSeeder first.');
+
             return;
         }
 
@@ -176,7 +177,6 @@ class StaticCardFile2Seeder extends Seeder
         $this->command->info('Lesson 1 vocabulary added.');
     }
 
-
     protected function seedLesson2($deck)
     {
         $vocabulary = [
@@ -281,6 +281,7 @@ class StaticCardFile2Seeder extends Seeder
 
         $this->command->info('Lesson 2 vocabulary added.');
     }
+
     protected function seedLesson3($deck)
     {
         // این متد لغات درس ۳ را به پایگاه داده اضافه می کند.
@@ -722,7 +723,6 @@ class StaticCardFile2Seeder extends Seeder
         $this->command->info('Lesson 7 vocabulary added.');
     }
 
-
     protected function seedLesson8($deck)
     {
         $vocabulary = [
@@ -1130,7 +1130,6 @@ class StaticCardFile2Seeder extends Seeder
 
         $this->command->info('Lesson 12 vocabulary added.');
     }
-
 
     private function seedVocabulary($deck, $vocabulary, $lessonName)
     {
