@@ -44,7 +44,6 @@ class DeckFileProcessor
         $deck = Deck::query()->create([
             'name' => $deckData['name'],
             'user_id' => auth()->id(),
-            'is_public' => (bool) $deckData['is_public'],
             'new_cards_per_day' => (int) $deckData['new_cards_per_day'],
         ]);
 

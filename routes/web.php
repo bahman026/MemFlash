@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
 use App\Http\Controllers\LevelSelectionController;
@@ -53,6 +54,13 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::delete('/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     Route::post('/decks/{deck}/reset', [DeckController::class, 'reset'])->name('decks.reset');
     Route::get('/decks/{deck}/export', [DeckController::class, 'exportCsv'])->name('decks.export');
+
+    // Card management routes
+    Route::get('/decks/{deck}/cards/create', [CardController::class, 'create'])->name('cards.create');
+    Route::post('/decks/{deck}/cards', [CardController::class, 'store'])->name('cards.store');
+    Route::get('/cards/{card}/edit', [CardController::class, 'edit'])->name('cards.edit');
+    Route::put('/cards/{card}', [CardController::class, 'update'])->name('cards.update');
+    Route::delete('/cards/{card}', [CardController::class, 'destroy'])->name('cards.destroy');
 
     // Study routes
     Route::get('/study/{deck}', [StudyController::class, 'start'])->name('study.start');

@@ -16,8 +16,8 @@
 @endphp
 
 <div class="{{ $class }}">
-    <!-- Header with deck name and status -->
-    <div class="p-6 pb-4">
+    <!-- Header with deck name and status - Clickable to View All -->
+    <a href="{{ route('decks.show', $deck) }}" class="block p-6 pb-4 hover:bg-gray-50 transition-colors">
         <div class="flex items-start justify-between mb-4">
             <div class="flex-1 min-w-0">
                 <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate leading-tight mb-1">
@@ -59,7 +59,7 @@
                 </span>
             </div>
         </div>
-    </div>
+    </a>
 
     <!-- Action buttons -->
     <div class="px-6 pb-6">
@@ -79,22 +79,7 @@
                 @endif
             </a>
 
-            <!-- Secondary Actions -->
-            <div class="grid grid-cols-2 gap-2 mb-2">
-                <a href="{{ route('decks.edit', $deck) }}" class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 text-center flex items-center justify-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                    </svg>
-                    Edit
-                </a>
-                
-                <a href="{{ route('decks.export', $deck) }}" class="px-3 py-2 border border-green-300 rounded-lg text-xs font-medium text-green-700 hover:bg-green-50 hover:border-green-400 transition-all duration-200 text-center flex items-center justify-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                    </svg>
-                    Export
-                </a>
-            </div>
+
 
             <!-- Danger Actions -->
             <div class="grid grid-cols-2 gap-2">

@@ -18,11 +18,15 @@
                 
                 <!-- Import Mode Selection -->
                 <div class="mb-4 sm:mb-6">
-                    <label class="block text-sm font-semibold text-gray-700 mb-3">Import Mode</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Deck Creation Mode</label>
                     <div class="space-y-3">
                         <label class="flex items-center">
-                            <input type="radio" name="import_mode" value="new" checked class="mr-3 text-primary-600 focus:ring-primary-500" onchange="toggleImportMode()">
-                            <span class="text-sm text-gray-700">Create New Deck</span>
+                            <input type="radio" name="import_mode" value="empty" checked class="mr-3 text-primary-600 focus:ring-primary-500" onchange="toggleImportMode()">
+                            <span class="text-sm text-gray-700">Create Empty Deck (Add cards manually)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="import_mode" value="new" class="mr-3 text-primary-600 focus:ring-primary-500" onchange="toggleImportMode()">
+                            <span class="text-sm text-gray-700">Create Deck from File</span>
                         </label>
                         <label class="flex items-center">
                             <input type="radio" name="import_mode" value="existing" class="mr-3 text-primary-600 focus:ring-primary-500" onchange="toggleImportMode()">
@@ -61,7 +65,7 @@
                 </div>
 
                 <!-- File Upload -->
-                <div class="mb-4 sm:mb-6">
+                <div id="file-upload-section" class="mb-4 sm:mb-6 hidden">
                     <label for="deck_file" class="block text-sm font-semibold text-gray-700 mb-2">Upload File</label>
                     <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-gray-400 transition-colors">
                         <div class="space-y-1 text-center">
@@ -71,7 +75,7 @@
                             <div class="flex text-sm text-gray-600">
                                 <label for="deck_file" class="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500">
                                     <span>Upload a file</span>
-                                    <input id="deck_file" name="file" type="file" class="sr-only" accept=".csv,.xlsx,.xls" required>
+                                    <input id="deck_file" name="file" type="file" class="sr-only" accept=".csv,.xlsx,.xls">
                                 </label>
                                 <p class="pl-1">or drag and drop</p>
                             </div>
@@ -112,7 +116,7 @@
                 </div>
 
                 <!-- File Format Info -->
-                <div class="mb-4 sm:mb-6 p-3 bg-blue-50 rounded-lg">
+                <div id="file-format-info" class="mb-4 sm:mb-6 p-3 bg-blue-50 rounded-lg hidden">
                     <h4 class="text-sm font-semibold text-blue-900 mb-2">Supported File Formats:</h4>
                     <div class="text-xs text-blue-800 space-y-2">
                         <div>
@@ -155,6 +159,8 @@
 function openDeckModal() {
     document.getElementById('deck-create-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    // Initialize the form state when opening
+    toggleImportMode();
 }
 
 function closeDeckModal() {
@@ -168,30 +174,53 @@ function closeDeckModal() {
 }
 
 function toggleImportMode() {
+    const emptyDeckMode = document.querySelector('input[name="import_mode"][value="empty"]').checked;
     const newDeckMode = document.querySelector('input[name="import_mode"][value="new"]').checked;
+    const existingDeckMode = document.querySelector('input[name="import_mode"][value="existing"]').checked;
+    
     const newDeckSection = document.getElementById('new-deck-section');
     const existingDeckSection = document.getElementById('existing-deck-section');
     const deckSettingsSection = document.getElementById('deck-settings-section');
+    const fileUploadSection = document.getElementById('file-upload-section');
+    const fileFormatInfo = document.getElementById('file-format-info');
     const submitButton = document.getElementById('submit-button');
     const deckNameInput = document.getElementById('deck_name');
     const existingDeckSelect = document.getElementById('existing_deck_id');
+    const fileInput = document.getElementById('deck_file');
     
-    if (newDeckMode) {
-        // Show new deck section and settings, hide existing deck section
+    if (emptyDeckMode) {
+        // Show new deck section and settings, hide existing deck section, file upload, and file format info
         newDeckSection.classList.remove('hidden');
         existingDeckSection.classList.add('hidden');
         deckSettingsSection.classList.remove('hidden');
-        submitButton.textContent = 'Create Deck';
+        fileUploadSection.classList.add('hidden');
+        fileFormatInfo.classList.add('hidden');
+        submitButton.textContent = 'Create Empty Deck';
         deckNameInput.required = true;
         existingDeckSelect.required = false;
+        fileInput.required = false;
+    } else if (newDeckMode) {
+        // Show new deck section, settings, file upload, and file format info, hide existing deck section
+        newDeckSection.classList.remove('hidden');
+        existingDeckSection.classList.add('hidden');
+        deckSettingsSection.classList.remove('hidden');
+        fileUploadSection.classList.remove('hidden');
+        fileFormatInfo.classList.remove('hidden');
+        submitButton.textContent = 'Create Deck from File';
+        deckNameInput.required = true;
+        existingDeckSelect.required = false;
+        fileInput.required = true;
     } else {
-        // Show existing deck section, hide new deck section and settings
+        // Show existing deck section, file upload, and file format info, hide new deck section and settings
         newDeckSection.classList.add('hidden');
         existingDeckSection.classList.remove('hidden');
         deckSettingsSection.classList.add('hidden');
+        fileUploadSection.classList.remove('hidden');
+        fileFormatInfo.classList.remove('hidden');
         submitButton.textContent = 'Import to Deck';
         deckNameInput.required = false;
         existingDeckSelect.required = true;
+        fileInput.required = true;
     }
 }
 
@@ -224,23 +253,38 @@ document.getElementById('deck-create-modal').addEventListener('click', function(
 // Prevent form submission if no file is selected or required fields are missing
 document.getElementById('deck-create-form').addEventListener('submit', function(e) {
     const fileInput = document.getElementById('deck_file');
+    const emptyDeckMode = document.querySelector('input[name="import_mode"][value="empty"]').checked;
     const newDeckMode = document.querySelector('input[name="import_mode"][value="new"]').checked;
+    const existingDeckMode = document.querySelector('input[name="import_mode"][value="existing"]').checked;
     const deckNameInput = document.getElementById('deck_name');
     const existingDeckSelect = document.getElementById('existing_deck_id');
     
-    if (!fileInput.files[0]) {
-        e.preventDefault();
-        alert('Please select a file to upload.');
-        return;
-    }
-    
-    if (newDeckMode) {
+    if (emptyDeckMode) {
+        // Empty deck mode - only require deck name
+        if (!deckNameInput.value.trim()) {
+            e.preventDefault();
+            alert('Please enter a deck name.');
+            return;
+        }
+    } else if (newDeckMode) {
+        // File upload mode - require file and deck name
+        if (!fileInput.files[0]) {
+            e.preventDefault();
+            alert('Please select a file to upload.');
+            return;
+        }
         if (!deckNameInput.value.trim()) {
             e.preventDefault();
             alert('Please enter a deck name.');
             return;
         }
     } else {
+        // Import to existing deck mode - require file and existing deck selection
+        if (!fileInput.files[0]) {
+            e.preventDefault();
+            alert('Please select a file to upload.');
+            return;
+        }
         if (!existingDeckSelect.value) {
             e.preventDefault();
             alert('Please select a deck to import to.');

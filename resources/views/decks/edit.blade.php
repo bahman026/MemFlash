@@ -101,5 +101,89 @@
                 </div>
             </form>
         </div>
+
+        <!-- Card Management Actions -->
+        <div class="mt-6 bg-white shadow-sm rounded-xl border border-gray-100">
+            <div class="p-4 sm:p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Card Management</h3>
+                <div class="flex flex-col sm:flex-row gap-3 mb-6">
+                    <a href="{{ route('cards.create', $deck) }}" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 text-center flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Add New Card
+                    </a>
+                    <a href="{{ route('decks.show', $deck) }}" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 text-center flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        Manage All Cards
+                    </a>
+                </div>
+
+                <!-- Quick Card List -->
+                @if($deck->cards->count() > 0)
+                    <div>
+                        <h4 class="text-sm font-semibold text-gray-900 mb-3">Recent Cards ({{ $deck->cards->count() }} total)</h4>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                            @foreach($deck->cards->take(5) as $card)
+                                <div class="px-4 py-3 border-b border-gray-100 last:border-b-0 hover:bg-gray-100">
+                                    <div class="flex items-start justify-between">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                <div>
+                                                    <p class="text-xs font-medium text-gray-500">Front</p>
+                                                    <p class="text-sm text-gray-900 truncate">{{ $card->front }}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-xs font-medium text-gray-500">Back</p>
+                                                    <p class="text-sm text-gray-900 truncate">{{ $card->back }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4 flex items-center space-x-2">
+                                            <a href="{{ route('cards.edit', $card) }}" class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                                Edit
+                                            </a>
+                                            <form method="POST" action="{{ route('cards.destroy', $card) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this card?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs font-medium">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                            @if($deck->cards->count() > 5)
+                                <div class="px-4 py-3 text-center">
+                                    <a href="{{ route('decks.show', $deck) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                        View all {{ $deck->cards->count() }} cards →
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @else
+                    <div class="text-center py-8">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">No cards yet</h3>
+                        <p class="mt-1 text-sm text-gray-500">Get started by adding your first card.</p>
+                        <div class="mt-4">
+                            <a href="{{ route('cards.create', $deck) }}" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Add First Card
+                            </a>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        </div>
     </div>
 </x-layouts.dashboard>

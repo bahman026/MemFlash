@@ -36,10 +36,23 @@ class DeckController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $importMode = $request->input('import_mode', 'new');
+        $importMode = $request->input('import_mode', 'empty');
 
-        if ($importMode === 'new') {
-            // Create new deck validation
+        if ($importMode === 'empty') {
+            // Create empty deck validation
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'new_cards_per_day' => 'required|integer|min:1|max:100',
+            ], [
+                'name.required' => 'Deck name is required.',
+                'name.max' => 'Deck name must not exceed 255 characters.',
+                'new_cards_per_day.required' => 'Cards per day is required.',
+                'new_cards_per_day.integer' => 'Cards per day must be a number.',
+                'new_cards_per_day.min' => 'Cards per day must be at least 1.',
+                'new_cards_per_day.max' => 'Cards per day must not exceed 100.',
+            ]);
+        } elseif ($importMode === 'new') {
+            // Create new deck from file validation
             $request->validate([
                 'name' => 'required|string|max:255',
                 'file' => 'required|file|mimes:csv,xlsx,xls|max:10240', // 10MB max
@@ -72,15 +85,28 @@ class DeckController extends Controller
         }
 
         try {
-            $file = $request->file('file');
+            if ($importMode === 'empty') {
+                // Create empty deck
+                $deck = Deck::create([
+                    'name' => $request->name,
+                    'user_id' => auth()->id(),
+                    'new_cards_per_day' => $request->new_cards_per_day,
+                ]);
 
-            // Additional file validation
-            $validationErrors = $this->fileProcessor->validateFile($file);
-            if (! empty($validationErrors)) {
-                return back()->withErrors(['file' => implode(' ', $validationErrors)])->withInput();
-            }
+                return redirect()->route('decks.show', $deck)->with(
+                    'success',
+                    "Empty deck '{$deck->name}' created successfully! You can now add cards manually."
+                );
+            } elseif ($importMode === 'new') {
+                // Create deck from file
+                $file = $request->file('file');
 
-            if ($importMode === 'new') {
+                // Additional file validation
+                $validationErrors = $this->fileProcessor->validateFile($file);
+                if (! empty($validationErrors)) {
+                    return back()->withErrors(['file' => implode(' ', $validationErrors)])->withInput();
+                }
+
                 // Process the file and create deck with cards
                 $deck = $this->fileProcessor->processFile($file, $request->all());
 
@@ -90,6 +116,14 @@ class DeckController extends Controller
                 );
             } else {
                 // Import to existing deck
+                $file = $request->file('file');
+
+                // Additional file validation
+                $validationErrors = $this->fileProcessor->validateFile($file);
+                if (! empty($validationErrors)) {
+                    return back()->withErrors(['file' => implode(' ', $validationErrors)])->withInput();
+                }
+
                 $deck = Deck::findOrFail($request->input('existing_deck_id'));
                 $this->authorize('update', $deck);
 

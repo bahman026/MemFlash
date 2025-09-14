@@ -108,12 +108,14 @@ class StaticDeck extends Model
 
     /**
      * Reset learning progress for all cards in this static deck
-     * This will reset intervals, revised_at, and last_reviewed timestamps
+     * This will reset intervals, ease_factor, repetitions, revised_at, and last_reviewed timestamps
      */
     public function resetLearningProgress(): void
     {
         $this->cards()->update([
             'interval' => 1,
+            'ease_factor' => 2.5,
+            'repetitions' => 0,
             'revised_at' => null,
             'last_reviewed' => null,
         ]);
