@@ -11,7 +11,7 @@
     <meta name="description" content="Select your learning level to get personalized content">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('js/tailwind.min.js') }}"></script>
     <script>
         tailwind.config = {
             theme: {

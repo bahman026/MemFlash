@@ -97,32 +97,18 @@
                 </div>
 
                 <!-- Deck Settings (only for new deck) -->
-                <div id="deck-settings-section" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 sm:mb-6">
-                    <div>
-                        <label for="new_cards_per_day" class="block text-sm font-semibold text-gray-700 mb-2">Cards per day</label>
-                        <input type="number" 
-                               id="new_cards_per_day" 
-                               name="new_cards_per_day" 
-                               value="10"
-                               min="1"
-                               max="100"
-                               class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
-                        @error('new_cards_per_day')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label for="is_public" class="block text-sm font-semibold text-gray-700 mb-2">Visibility</label>
-                        <select id="is_public" 
-                                name="is_public" 
-                                class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
-                            <option value="0">Private</option>
-                            <option value="1">Public</option>
-                        </select>
-                        @error('is_public')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <div id="deck-settings-section" class="mb-4 sm:mb-6">
+                    <label for="new_cards_per_day" class="block text-sm font-semibold text-gray-700 mb-2">Cards per day</label>
+                    <input type="number" 
+                           id="new_cards_per_day" 
+                           name="new_cards_per_day" 
+                           value="10"
+                           min="1"
+                           max="100"
+                           class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors">
+                    @error('new_cards_per_day')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- File Format Info -->

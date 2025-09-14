@@ -17,11 +17,14 @@
                         <h1 class="text-lg sm:text-xl font-bold text-gray-900">{{ $title }}</h1>
                     @else
                         <a href="{{ route('welcome') }}" class="flex items-center space-x-2 group">
-                            <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-200">
-                                <span class="text-white text-lg sm:text-xl">📚</span>
+                            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-200">
+                                <img src="{{ asset('flash-cards.svg') }}" alt="MemFlash Logo" class="w-full h-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <div class="w-full h-full bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center" style="display: none;">
+                                    <span class="text-white text-lg sm:text-xl">📚</span>
+                                </div>
                             </div>
                             <div class="hidden sm:block">
-                                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{{ $title }}</h1>
+                                <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">MemFlash</h1>
                                 @if($subtitle)
                                     <p class="text-xs text-gray-500">{{ $subtitle }}</p>
                                 @endif
@@ -42,7 +45,7 @@
                     @endif
 
                     <!-- Profile Dropdown -->
-                    <x-profile-dropdown :user="auth()->user()" />
+                    <x-ui.navigation.profile-dropdown :user="auth()->user()" />
                 </div>
             @elseif(!auth()->check())
                 <!-- Guest User Actions -->

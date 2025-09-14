@@ -55,38 +55,24 @@
                 </div>
 
                 <!-- Deck Settings -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
-                    <div>
-                        <label for="new_cards_per_day" class="block text-sm font-semibold text-gray-700 mb-2">Cards per day</label>
-                        <input type="number"
-                               id="new_cards_per_day"
-                               name="new_cards_per_day"
-                               value="{{ old('new_cards_per_day', $deck->new_cards_per_day) }}"
-                               min="1"
-                               max="100"
-                               class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors @error('new_cards_per_day') border-red-300 @enderror">
-                        @error('new_cards_per_day')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-                    <div>
-                        <label for="is_public" class="block text-sm font-semibold text-gray-700 mb-2">Visibility</label>
-                        <select id="is_public"
-                                name="is_public"
-                                class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors @error('is_public') border-red-300 @enderror">
-                            <option value="0" {{ old('is_public', $deck->is_public) == 0 ? 'selected' : '' }}>Private</option>
-                            <option value="1" {{ old('is_public', $deck->is_public) == 1 ? 'selected' : '' }}>Public</option>
-                        </select>
-                        @error('is_public')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <div class="mb-4 sm:mb-6">
+                    <label for="new_cards_per_day" class="block text-sm font-semibold text-gray-700 mb-2">Cards per day</label>
+                    <input type="number"
+                           id="new_cards_per_day"
+                           name="new_cards_per_day"
+                           value="{{ old('new_cards_per_day', $deck->new_cards_per_day) }}"
+                           min="1"
+                           max="100"
+                           class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors @error('new_cards_per_day') border-red-300 @enderror">
+                    @error('new_cards_per_day')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <!-- Deck Stats -->
                 <div class="mb-4 sm:mb-6 p-4 bg-gray-50 rounded-lg">
                     <h3 class="text-sm font-semibold text-gray-900 mb-3">Deck Information</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div class="grid grid-cols-3 gap-4 text-center">
                         <div>
                             <p class="text-2xl font-bold text-primary-600">{{ $deck->cards()->count() }}</p>
                             <p class="text-xs text-gray-500">Total Cards</p>
@@ -98,10 +84,6 @@
                         <div>
                             <p class="text-2xl font-bold text-blue-600">{{ $deck->created_at->diffForHumans() }}</p>
                             <p class="text-xs text-gray-500">Age</p>
-                        </div>
-                        <div>
-                            <p class="text-2xl font-bold text-purple-600">{{ $deck->is_public ? 'Public' : 'Private' }}</p>
-                            <p class="text-xs text-gray-500">Visibility</p>
                         </div>
                     </div>
                 </div>

@@ -52,6 +52,7 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::put('/decks/{deck}', [DeckController::class, 'update'])->name('decks.update');
     Route::delete('/decks/{deck}', [DeckController::class, 'destroy'])->name('decks.destroy');
     Route::post('/decks/{deck}/reset', [DeckController::class, 'reset'])->name('decks.reset');
+    Route::get('/decks/{deck}/export', [DeckController::class, 'exportCsv'])->name('decks.export');
 
     // Study routes
     Route::get('/study/{deck}', [StudyController::class, 'start'])->name('study.start');

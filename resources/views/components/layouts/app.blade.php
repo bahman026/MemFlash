@@ -4,38 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="canonical" href="{{ url()->current() }}">
-    <link rel="icon" href="{{ asset('assets/images/favicon-300x300.png') }}" sizes="32x32">
-    <link rel="icon" href="{{ asset('assets/images/favicon-150x150.png') }}" sizes="192x192">
+    <link rel="icon" href="{{ asset('flash-cards.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('flash-cards.svg') }}">
 
     {{-- seo related tags --}}
     {{ $seo ?? '' }}
     @yield('seo')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <script defer src="{{ asset('js/alpine.min.js') }}"></script>
     <style>
         /* Mobile-specific improvements */
         @media (max-width: 640px) {
@@ -71,7 +50,7 @@
 
 <body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Header -->
-    <x-header 
+    <x-layouts.sections.header 
         :show-level="$showLevel ?? true" 
         :show-user="$showUser ?? true"
         :title="$headerTitle ?? 'MemFlash'"
@@ -81,7 +60,7 @@
         <x-slot name="actions">
             {{ $headerActions ?? '' }}
         </x-slot>
-    </x-header>
+    </x-layouts.sections.header>
 
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6 xl:px-8">
@@ -91,7 +70,7 @@
 
     <!-- Footer -->
     @if(!isset($hideFooter) || !$hideFooter)
-        <x-simple-footer />
+        <x-layouts.sections.simple-footer />
     @endif
 
     <!-- Additional Scripts -->

@@ -6,18 +6,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Deck;
 use App\Services\DeckFileProcessor;
+use App\Services\DeckCsvExportService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DeckController extends Controller
 {
     use AuthorizesRequests;
 
     public function __construct(
-        private readonly DeckFileProcessor $fileProcessor
+        private readonly DeckFileProcessor $fileProcessor,
+        private readonly DeckCsvExportService $csvExportService
     ) {}
 
     /**
@@ -41,7 +44,6 @@ class DeckController extends Controller
                 'name' => 'required|string|max:255',
                 'file' => 'required|file|mimes:csv,xlsx,xls|max:10240', // 10MB max
                 'new_cards_per_day' => 'required|integer|min:1|max:100',
-                'is_public' => 'required|boolean',
             ], [
                 'name.required' => 'Deck name is required.',
                 'name.max' => 'Deck name must not exceed 255 characters.',
@@ -53,7 +55,6 @@ class DeckController extends Controller
                 'new_cards_per_day.integer' => 'Cards per day must be a number.',
                 'new_cards_per_day.min' => 'Cards per day must be at least 1.',
                 'new_cards_per_day.max' => 'Cards per day must not exceed 100.',
-                'is_public.required' => 'Please select deck visibility.',
             ]);
         } else {
             // Import to existing deck validation
@@ -160,10 +161,9 @@ class DeckController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'new_cards_per_day' => 'required|integer|min:1|max:100',
-            'is_public' => 'required|boolean',
         ]);
 
-        $deck->update($request->only(['name', 'new_cards_per_day', 'is_public']));
+        $deck->update($request->only(['name', 'new_cards_per_day']));
 
         return redirect()->route('dashboard')->with('success', 'Deck updated successfully!');
     }
@@ -191,5 +191,15 @@ class DeckController extends Controller
         $deck->resetLearningProgress();
 
         return redirect()->route('dashboard')->with('success', "Learning progress for '{$deck->name}' has been reset! All cards will start from the beginning.");
+    }
+
+    /**
+     * Export deck to CSV
+     */
+    public function exportCsv(Deck $deck): StreamedResponse
+    {
+        $this->authorize('view', $deck);
+
+        return $this->csvExportService->exportUserDeck($deck);
     }
 }

@@ -11,7 +11,7 @@
     <meta name="description" content="Login to MemFlash and start your learning journey with intelligent flashcards">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="{{ asset('js/tailwind.min.js') }}"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -139,7 +139,7 @@
                     New to MemFlash?
                     <span class="text-blue-600 font-medium">Get started in seconds</span>
                 </p>
-                <x-simple-footer />
+                <x-layouts.sections.simple-footer />
             </div>
         </div>
     </div>
