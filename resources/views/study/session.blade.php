@@ -151,13 +151,41 @@
 
                             <!-- Show Answer Button -->
                             <div id="show-answer-section" class="text-center">
-                                <button id="show-answer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 inline-flex items-center border-2 border-blue-600 w-full sm:w-auto">
-                                    <svg class="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                                    </svg>
-                                    <span class="text-white font-bold">Show Answer</span>
+                                <button id="show-answer-btn" class="group relative bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 sm:px-8 sm:py-5 lg:px-10 lg:py-6 rounded-2xl sm:rounded-3xl text-base sm:text-lg font-bold transition-all duration-500 shadow-2xl hover:shadow-3xl transform hover:-translate-y-2 hover:scale-105 inline-flex items-center justify-center w-full sm:w-auto min-w-[200px] overflow-hidden">
+                                    <!-- Animated background effect -->
+                                    <div class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                    
+                                    <!-- Shimmer effect -->
+                                    <div class="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+                                    
+                                    <!-- Button content -->
+                                    <div class="relative z-10 flex items-center justify-center">
+                                        <div class="mr-3 sm:mr-4">
+                                            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </div>
+                                        <span class="text-white font-bold tracking-wide group-hover:tracking-wider transition-all duration-300">Show Answer</span>
+                                        
+                                        <!-- Arrow icon -->
+                                        <div class="ml-3 sm:ml-4 group-hover:translate-x-1 transition-transform duration-300">
+                                            <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Ripple effect on click -->
+                                    <div class="absolute inset-0 rounded-2xl sm:rounded-3xl overflow-hidden">
+                                        <div class="absolute inset-0 bg-white/20 scale-0 group-active:scale-100 transition-transform duration-150 rounded-2xl sm:rounded-3xl"></div>
+                                    </div>
                                 </button>
+                                
+                                <!-- Helper text -->
+                                <p class="mt-3 text-sm text-gray-500 font-medium">
+                                    Think about your answer, then click to reveal
+                                </p>
                             </div>
 
                             <!-- Rating Buttons -->
