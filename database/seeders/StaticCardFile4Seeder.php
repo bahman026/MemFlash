@@ -1087,7 +1087,7 @@ class StaticCardFile4Seeder extends Seeder
                     'static_deck_id' => $deck->id,
                     'front' => $cardData['front'],
                     'back' => $cardData['back'],
-                    'pronunciation' => $cardData['pronunciation'] ?? null,
+                    'audio' => $cardData['pronunciation'] ? ['pronunciation' => $cardData['pronunciation']] : null,
                     'interval' => 1,
                     'revised_at' => null,
                     'last_reviewed' => null,
