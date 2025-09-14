@@ -118,4 +118,5 @@ class StaticDeck extends Model
             'last_reviewed' => null,
         ]);
     }
+
 }

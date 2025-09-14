@@ -35,6 +35,7 @@ class Deck extends Model
         'user_id',
         'is_public',
         'new_cards_per_day',
+        'max_cards',
     ];
 
     /**
@@ -51,5 +52,21 @@ class Deck extends Model
     public function cards(): HasMany
     {
         return $this->hasMany(Card::class);
+    }
+
+    /**
+     * Check if the deck has reached its maximum card limit
+     */
+    public function hasReachedCardLimit(): bool
+    {
+        return $this->cards()->count() >= $this->max_cards;
+    }
+
+    /**
+     * Get the number of cards remaining before reaching the limit
+     */
+    public function getRemainingCardSlots(): int
+    {
+        return max(0, $this->max_cards - $this->cards()->count());
     }
 }

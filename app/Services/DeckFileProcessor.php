@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Constants\DeckLimits;
 use App\Models\Card;
 use App\Models\Deck;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +27,17 @@ class DeckFileProcessor
             $data = $this->processExcelFile($file);
         } else {
             throw new \InvalidArgumentException('Unsupported file format. Please upload CSV or Excel files.');
+        }
+
+        // Check if the number of cards exceeds the limit
+        if (count($data) > DeckLimits::USER_DECK_MAX_CARDS) {
+            throw new \InvalidArgumentException("The file contains " . count($data) . " cards, but the maximum allowed is " . DeckLimits::USER_DECK_MAX_CARDS . " cards per deck.");
+        }
+
+        // Check if user has reached the maximum number of decks
+        $userDeckCount = Deck::where('user_id', auth()->id())->count();
+        if ($userDeckCount >= DeckLimits::USER_MAX_DECKS) {
+            throw new \InvalidArgumentException("You have reached the maximum limit of " . DeckLimits::USER_MAX_DECKS . " decks. Please delete some decks before creating new ones.");
         }
 
         // Create the deck
@@ -222,6 +234,15 @@ class DeckFileProcessor
         }
 
         Log::info('After removing duplicates: ' . count($uniqueData) . " unique rows, {$duplicateRows} duplicates removed");
+
+        // Check if adding new cards would exceed the deck limit
+        $currentCardCount = $deck->cards()->count();
+        $newCardsToAdd = count($uniqueData);
+        
+        if ($currentCardCount + $newCardsToAdd > DeckLimits::USER_DECK_MAX_CARDS) {
+            $availableSlots = DeckLimits::USER_DECK_MAX_CARDS - $currentCardCount;
+            throw new \InvalidArgumentException("Adding {$newCardsToAdd} cards would exceed the deck limit of " . DeckLimits::USER_DECK_MAX_CARDS . " cards. You can only add {$availableSlots} more cards to this deck.");
+        }
 
         foreach ($uniqueData as $cardData) {
             // Skip if front or back is empty

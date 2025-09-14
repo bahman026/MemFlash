@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Constants\DeckLimits;
 use App\Enums\UserLevelEnum;
 use App\Enums\UserStatusEnum;
 use Carbon\Carbon;
@@ -116,5 +117,29 @@ class User extends Authenticatable
                 ['static_deck_id' => $staticDeck->id],
                 ['total_cards' => 0] // Will be updated when cards are loaded
             );
+    }
+
+    /**
+     * Check if the user has reached the maximum number of decks
+     */
+    public function hasReachedDeckLimit(): bool
+    {
+        return $this->decks()->count() >= DeckLimits::USER_MAX_DECKS;
+    }
+
+    /**
+     * Get the number of decks remaining before reaching the limit
+     */
+    public function getRemainingDeckSlots(): int
+    {
+        return max(0, DeckLimits::USER_MAX_DECKS - $this->decks()->count());
+    }
+
+    /**
+     * Get the current number of decks created by the user
+     */
+    public function getDeckCount(): int
+    {
+        return $this->decks()->count();
     }
 }
