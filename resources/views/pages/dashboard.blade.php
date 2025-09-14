@@ -49,7 +49,7 @@
         </div>
 
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
             <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100">
                 <div class="p-4 sm:p-5">
                     <div class="flex items-center">
@@ -86,59 +86,6 @@
                 </div>
             </div>
 
-            <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100">
-                <div class="p-4 sm:p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
-                                <span class="text-white text-lg sm:text-xl">⚡</span>
-                            </div>
-                        </div>
-                        <div class="ml-3 sm:ml-4 w-0 flex-1 min-w-0">
-                            <dl>
-                                <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Cards Due Today</dt>
-                                <dd class="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                                    @php
-                                        $totalDueCards = $decks->sum(function ($deck) {
-                                            return $deck->cards()
-                                                ->where(function ($query) {
-                                                    $query->whereNull('revised_at')
-                                                        ->orWhere('revised_at', '<=', now());
-                                                })
-                                                ->count();
-                                        });
-                                    @endphp
-                                    {{ $totalDueCards }}
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 rounded-xl border border-gray-100">
-                <div class="p-4 sm:p-5">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0">
-                            <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-sm">
-                                <span class="text-white text-lg sm:text-xl">🔥</span>
-                            </div>
-                        </div>
-                        <div class="ml-3 sm:ml-4 w-0 flex-1 min-w-0">
-                            <dl>
-                                <dt class="text-xs sm:text-sm font-medium text-gray-500 truncate">Study Streak</dt>
-                                <dd class="text-xl sm:text-2xl font-bold text-gray-900 mt-1">
-                                    @php
-                                        $studyStreak = 0; // This would be calculated from user study history
-                                        // For now, we'll show a placeholder
-                                    @endphp
-                                    {{ $studyStreak }} days
-                                </dd>
-                            </dl>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Deck Limits Information -->
@@ -479,21 +426,6 @@
             </div>
         </div>
 
-        <!-- Recent Activity -->
-        <div class="mt-6 sm:mt-8 bg-white shadow-sm rounded-xl border border-gray-100">
-            <div class="px-3 py-4 sm:px-4 sm:py-5 lg:px-6 lg:py-6">
-                <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-4">Recent Activity</h2>
-                <div class="text-center py-6 sm:py-8 text-gray-500">
-                    <div class="mx-auto h-12 w-12 text-gray-400 mb-3">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-sm sm:text-base font-medium">No recent activity to show</p>
-                    <p class="text-xs sm:text-sm text-gray-400 mt-1">Your study sessions will appear here</p>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Deck Creation Modal -->

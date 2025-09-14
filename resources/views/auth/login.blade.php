@@ -135,10 +135,11 @@
 
             <!-- Footer -->
             <div class="text-center">
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 mb-4">
                     New to MemFlash?
                     <span class="text-blue-600 font-medium">Get started in seconds</span>
                 </p>
+                <x-simple-footer />
             </div>
         </div>
     </div>

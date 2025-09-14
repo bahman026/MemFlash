@@ -16,7 +16,7 @@
                     @if($variant === 'minimal')
                         <h1 class="text-lg sm:text-xl font-bold text-gray-900">{{ $title }}</h1>
                     @else
-                        <a href="{{ route('dashboard') }}" class="flex items-center space-x-2 group">
+                        <a href="{{ route('welcome') }}" class="flex items-center space-x-2 group">
                             <div class="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow duration-200">
                                 <span class="text-white text-lg sm:text-xl">📚</span>
                             </div>

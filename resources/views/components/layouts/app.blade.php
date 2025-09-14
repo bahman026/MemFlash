@@ -69,7 +69,7 @@
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Header -->
     <x-header 
         :show-level="$showLevel ?? true" 
@@ -84,20 +84,14 @@
     </x-header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6 xl:px-8">
+    <main class="flex-1 max-w-7xl mx-auto py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6 xl:px-8">
         {{ $slot ?? '' }}
         @yield('content')
     </main>
 
-    <!-- Footer (optional) -->
-    @if(isset($showFooter) && $showFooter)
-        <footer class="bg-white border-t border-gray-200 mt-auto">
-            <div class="max-w-7xl mx-auto py-6 px-3 sm:px-6 lg:px-8">
-                <div class="text-center text-sm text-gray-500">
-                    <p>&copy; {{ date('Y') }} MemFlash. All rights reserved.</p>
-                </div>
-            </div>
-        </footer>
+    <!-- Footer -->
+    @if(!isset($hideFooter) || !$hideFooter)
+        <x-simple-footer />
     @endif
 
     <!-- Additional Scripts -->
