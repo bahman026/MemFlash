@@ -18,11 +18,14 @@ class StudySession {
         this.deckInfo = null;
         this.isAnswerShown = false;
         this.pendingUpdates = [];
+        this.autoPronunciationTimeout = null; // Track auto-pronunciation timeout
         
         // Configuration
         this.config = {
             type: 'user', // 'user' or 'static'
             apiEndpoint: '/api/study/batch-update',
+            autoPronunciation: true, // Enable auto-pronunciation by default
+            autoPronunciationDelay: 1000, // 1 second delay
             ...config
         };
 
@@ -126,6 +129,12 @@ class StudySession {
         console.log('showCurrentCard called, cards length:', this.cards.length);
         console.log('Current card index:', this.currentCardIndex);
 
+        // Clear any existing auto-pronunciation timeout
+        if (this.autoPronunciationTimeout) {
+            clearTimeout(this.autoPronunciationTimeout);
+            this.autoPronunciationTimeout = null;
+        }
+
         SessionState.showCard();
 
         if (this.cards.length === 0) {
@@ -152,6 +161,12 @@ class StudySession {
 
         this.isAnswerShown = false;
         this.updateProgress();
+        
+        // Auto-pronunciation with delay
+        if (this.config.autoPronunciation) {
+            this.scheduleAutoPronunciation();
+        }
+        
         console.log('Card displayed successfully');
     }
 
@@ -289,7 +304,32 @@ class StudySession {
         }
     }
 
+    /**
+     * Schedule auto-pronunciation with configured delay
+     */
+    scheduleAutoPronunciation() {
+        // Clear any existing timeout
+        if (this.autoPronunciationTimeout) {
+            clearTimeout(this.autoPronunciationTimeout);
+        }
+
+        // Schedule pronunciation after delay
+        this.autoPronunciationTimeout = setTimeout(() => {
+            this.playAudio();
+            this.autoPronunciationTimeout = null;
+        }, this.config.autoPronunciationDelay);
+    }
+
+    /**
+     * Cancel auto-pronunciation if user manually triggers audio
+     */
     playAudio() {
+        // Cancel auto-pronunciation if it's scheduled
+        if (this.autoPronunciationTimeout) {
+            clearTimeout(this.autoPronunciationTimeout);
+            this.autoPronunciationTimeout = null;
+        }
+
         const frontText = document.getElementById('card-front').textContent;
         speakText(frontText);
     }
