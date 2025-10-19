@@ -17,7 +17,7 @@ services:
 
 
     webserver:
-        image: nginx:alpine
+        image: nginx:1.29-alpine
         container_name: ${CONTAINER_NAME}_nginx
         restart: unless-stopped
         ports:
@@ -29,13 +29,14 @@ services:
             - net
 
     db:
-        image: postgres:latest
+        image: postgres:17.6-alpine
         container_name: ${CONTAINER_NAME}_db
-        restart: unless-stopped
+        restart: always
         environment:
             POSTGRES_DB: ${DB_DATABASE}
             POSTGRES_PASSWORD: ${DB_PASSWORD}
             POSTGRES_USER: ${DB_USERNAME}
+            PGDATA: /var/lib/postgresql/data
         volumes:
             - ./docker/volumes/postgres/data:/var/lib/postgresql/data
         ports:
@@ -44,7 +45,7 @@ services:
             - net
 
     redis:
-        image: redis:alpine
+        image: redis:8.2-alpine
         container_name: ${CONTAINER_NAME}_redis
         restart: always
         ports:
