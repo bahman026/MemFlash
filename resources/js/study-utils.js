@@ -49,8 +49,18 @@ function speakText(text, options = {}) {
             speakBtn.disabled = true;
             fullscreenSpeakBtn.disabled = true;
 
-            // Restore button when speech ends
+            // Restore button when speech ends or errors
             utterance.onend = () => {
+                speakBtn.innerHTML = originalContent;
+                fullscreenSpeakBtn.innerHTML = fullscreenOriginalContent;
+                speakBtn.classList.remove('bg-blue-200');
+                fullscreenSpeakBtn.classList.remove('bg-blue-200');
+                speakBtn.disabled = false;
+                fullscreenSpeakBtn.disabled = false;
+            };
+
+            utterance.onerror = (event) => {
+                console.error('Speech synthesis error:', event.error);
                 speakBtn.innerHTML = originalContent;
                 fullscreenSpeakBtn.innerHTML = fullscreenOriginalContent;
                 speakBtn.classList.remove('bg-blue-200');

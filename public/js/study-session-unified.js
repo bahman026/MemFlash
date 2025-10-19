@@ -19,6 +19,8 @@ class StudySession {
         this.isAnswerShown = false;
         this.pendingUpdates = [];
         this.autoPronunciationTimeout = null; // Track auto-pronunciation timeout
+        this.userHasInteracted = false; // Track if user has interacted with audio
+        this.isFirstCard = true; // Track if this is the first card shown
         
         // Configuration
         this.config = {
@@ -162,10 +164,15 @@ class StudySession {
         this.isAnswerShown = false;
         this.updateProgress();
         
-        // Auto-pronunciation with delay
-        if (this.config.autoPronunciation) {
+        // Auto-pronunciation with delay (only after user interaction)
+        if (this.config.autoPronunciation && this.userHasInteracted) {
             this.scheduleAutoPronunciation();
+        } else if (this.isFirstCard) {
+            // For first card, show a hint to click play button
+            this.showAudioHint();
         }
+        
+        this.isFirstCard = false;
         
         console.log('Card displayed successfully');
     }
@@ -321,6 +328,23 @@ class StudySession {
     }
 
     /**
+     * Show audio hint for first card
+     */
+    showAudioHint() {
+        const speakBtn = document.getElementById('speak-btn');
+        if (speakBtn) {
+            speakBtn.classList.add('animate-pulse', 'ring-2', 'ring-blue-500');
+            speakBtn.title = 'Click to enable audio and auto-pronunciation';
+            
+            // Remove hint after 5 seconds
+            setTimeout(() => {
+                speakBtn.classList.remove('animate-pulse', 'ring-2', 'ring-blue-500');
+                speakBtn.title = 'Play question audio';
+            }, 5000);
+        }
+    }
+
+    /**
      * Cancel auto-pronunciation if user manually triggers audio
      */
     playAudio() {
@@ -328,6 +352,12 @@ class StudySession {
         if (this.autoPronunciationTimeout) {
             clearTimeout(this.autoPronunciationTimeout);
             this.autoPronunciationTimeout = null;
+        }
+
+        // Mark that user has interacted with audio (enables auto-play for future cards)
+        if (!this.userHasInteracted) {
+            this.userHasInteracted = true;
+            console.log('User interaction recorded - auto-pronunciation enabled for future cards');
         }
 
         const frontText = document.getElementById('card-front').textContent;

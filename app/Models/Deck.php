@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Constants\DeckLimits;
 use Carbon\Carbon;
 use Database\Factories\DeckFactory;
 use Illuminate\Database\Eloquent\Collection;
@@ -60,7 +59,7 @@ class Deck extends Model
      */
     public function hasReachedCardLimit(): bool
     {
-        return $this->cards()->count() >= DeckLimits::USER_DECK_MAX_CARDS;
+        return $this->cards()->count() >= $this->max_cards;
     }
 
     /**
@@ -68,20 +67,6 @@ class Deck extends Model
      */
     public function getRemainingCardSlots(): int
     {
-        return max(0, DeckLimits::USER_DECK_MAX_CARDS - $this->cards()->count());
-    }
-
-    /**
-     * Reset learning progress for all cards in this deck
-     */
-    public function resetLearningProgress(): void
-    {
-        $this->cards()->update([
-            'interval' => 1,
-            'ease_factor' => 2.5,
-            'repetitions' => 0,
-            'revised_at' => null,
-            'last_reviewed' => null,
-        ]);
+        return max(0, $this->max_cards - $this->cards()->count());
     }
 }
