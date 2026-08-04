@@ -859,21 +859,27 @@ class StaticCardStarterSeeder extends Seeder
     private function seedVocabulary($deck, $vocabulary, $lessonName)
     {
         foreach ($vocabulary as $cardData) {
-            StaticCard::updateOrCreate(
-                [
-                    'static_deck_id' => $deck->id,
-                    'front' => $cardData['front'],
-                    'back' => $cardData['back'],
-                ],
-                [
-                    'static_deck_id' => $deck->id,
-                    'front' => $cardData['front'],
-                    'back' => $cardData['back'],
-                    'interval' => 1,
-                    'revised_at' => null,
-                    'last_reviewed' => null,
-                ]
-            );
+            $card = StaticCard::firstOrNew([
+                'static_deck_id' => $deck->id,
+                'front' => $cardData['front'],
+                'back' => $cardData['back'],
+            ]);
+
+            // Persist the IPA pronunciation. This seeder used to read the
+            // 'pronunciation' key and then drop it, leaving audio null.
+            $card->audio = ! empty($cardData['pronunciation'])
+                ? ['pronunciation' => $cardData['pronunciation']]
+                : null;
+
+            // Initialise scheduling for new cards only. Writing these on every run
+            // reset interval/revised_at and wiped study progress on re-seed.
+            if (! $card->exists) {
+                $card->interval = 1;
+                $card->revised_at = null;
+                $card->last_reviewed = null;
+            }
+
+            $card->save();
         }
 
         $this->command->info('Seeded ' . count($vocabulary) . ' cards for ' . $lessonName);
