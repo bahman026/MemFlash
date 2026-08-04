@@ -113,24 +113,100 @@ and prod are Postgres.
 
 ## Architecture
 
-### Two parallel, deliberately separate card hierarchies
+### Scheduling is FSRS-6, and the scheduler is pure
+
+`app/Fsrs/` implements FSRS-6 — the algorithm Anki ships by default. It has **no
+database, no framework and no clock**: the timestamp is a parameter and randomness
+arrives through an injectable `FuzzSource`. That is what makes it testable against
+the published reference vectors with no I/O, so keep it that way.
+
+| File | Role |
+|---|---|
+| `Fsrs.php` | Formulas F1–F8 |
+| `Parameters.php` | 21 weights, derived `FACTOR`, clamp table |
+| `Scheduler.php` | State machine (learning/relearning steps), fuzz, rollover day math |
+| `SchedulerConfig.php` | One deck's preset |
+| `SchedulerFactory.php` | Resolves a `Scheduler` for a deck + user |
+| `CardSnapshot` / `ReviewOutcome` | Immutable in/out |
+| `Optimizer/` | Fits the 21 weights to logged history |
+
+`App\Services\ReviewService` is the only thing that writes: it runs the scheduler,
+saves state and appends the `review_logs` row in one transaction.
+
+**Non-negotiables, in rough order of damage if broken:**
+
+1. **Never persist retrievability.** Always derive it from stability and elapsed days.
+   There is a test asserting the column does not exist.
+2. **Observe `elapsed_days` and R before mutating** the card. Using post-update state
+   silently corrupts every later interval.
+3. **Update D before S.** Both stability formulas take the *new* difficulty.
+4. **Hard (2) is a pass.** Only Again (1) routes to the lapse formula. Ratings are 1–4.
+5. **Recompute `FACTOR` when `w[20]` changes** — never hard-code it.
+6. **Write a `review_logs` row for every review.** No log, no optimizer, ever.
+7. **Fuzz only in Review state, only above 2.5 days, only through `FuzzSource`.**
+8. **Use the rollover hour** for day arithmetic, not raw 24-hour differences.
+
+Two reference quirks are pinned by tests rather than "fixed", for compatibility:
+the fuzz formula can exceed its own upper bound by a day as the random draw
+approaches 1, and a **same-day** Hard may reduce stability even though Hard never
+can after a day or more.
+
+### Two card hierarchies, both with per-user memory
 
 ```
-User ──* Deck ──* Card                       user-owned, per-user SRS state
-User ──* UserStaticDeckProgress ──1 StaticDeck ──* StaticCard    global curriculum
-User ──* UserStaticDeckSetting  ──1 StaticDeck
+User ──* Deck ──* Card                                    memory on the card row
+User ──* UserStaticCardState ──1 StaticCard ──1 StaticDeck    memory per user
+User ──* UserStaticDeckProgress / UserStaticDeckSetting ──1 StaticDeck
 ```
 
-**`Deck` / `Card`** — user-created or CSV/XLSX-imported. SRS state lives on the user's own `cards` row.
-Guarded by `DeckPolicy` (`view` allows owner *or* `is_public`; `update`/`delete` owner-only).
+**`Deck` / `Card`** — user-created or CSV/XLSX-imported. Memory lives on the `cards`
+row, since the deck belongs to one person. Guarded by `DeckPolicy` (`view` allows
+owner *or* `is_public`; `update`/`delete` owner-only). Review endpoints authorize
+**`update`**, not `view`, because reviewing writes and `view` passes for other
+people's public decks.
 
-**`StaticDeck` / `StaticCard`** — the shipped curriculum, seeded from code. **Critical:** SRS columns
-(`interval`, `ease_factor`, `repetitions`, `revised_at`, `last_reviewed`) live on the **shared**
-`static_cards` rows, *not* per user. Per-user state is only `user_static_deck_progress`
-(`cards_studied` / `total_cards` / `progress_data`) and `user_static_deck_settings` (`cards_per_day`).
-So one user studying a static deck — or hitting `POST /static-decks/{deck}/reset` — rewrites the
-scheduling every other user sees. The code acknowledges this ("they're shared, not per-user").
-Treat any new static-deck feature as global-state mutation.
+**`StaticDeck` / `StaticCard`** — the shipped curriculum, seeded from code.
+`StaticCard` holds **no memory state at all**; it lives per user on
+`user_static_card_states`. Before 2026-08-04 those columns were on the shared
+`static_cards` rows, so one learner studying — or resetting — rewrote everyone
+else's schedule. `StaticDeck::resetLearningProgressFor(User)` takes a user for
+exactly that reason.
+
+Both models use the `HasFsrsMemory` trait, so the scheduler only ever sees a
+`CardSnapshot`.
+
+**Presets live in two places** and `SchedulerFactory` is the only thing that knows:
+`deck_configs` for personal decks, `user_static_deck_settings` for static decks
+(because their schedule is per user). A null `parameters` means "use the defaults".
+
+### Offline
+
+The client downloads its working set once, studies with no network, and queues raw
+ratings. **The server is authoritative.**
+
+- `resources/js/fsrs/fsrs.js` mirrors the PHP scheduler so the answer buttons can
+  label intervals with no round trip.
+- The queue stores the **raw rating + timestamp**, never computed state, so a
+  drifting mirror cannot corrupt stored scheduling.
+- `POST /api/sync` replays through the PHP scheduler; its result overwrites local state.
+
+> ⚠️ **The JS mirror and PHP must not diverge.** Both are pinned to
+> `tests/fixtures/fsrs-vectors.json`. If you change a formula in one, change it in
+> the other and run **both** suites (`pest` and `npm run test:js`). CI runs both.
+
+Replay is idempotent through `review_logs.client_uuid` (unique), applied
+oldest-first, and preserves the original timestamp.
+
+### The optimizer
+
+`fsrs:optimize` fits the 21 weights per deck from that deck's own log. Queued
+(`OptimizeFsrsParameters`) because it is CPU-bound, unique per deck, weekly by
+schedule. Needs **400** usable reviews minimum, 1000 for a reliable fit; "usable"
+excludes each card's first review and same-day repeats.
+
+Gradients are **numerical** (central differences), not analytic — slower, but the
+derivation is where hand-written optimizers go quietly wrong. A fit that does not
+beat the defaults is discarded. See `docs/DEPLOYMENT.md` for the worker and cron setup.
 
 ### Levels
 
@@ -149,15 +225,32 @@ lesson → `seedLessonN()` holds a `$vocabulary` array literal → shared privat
 does `updateOrCreate`. Card rows are `['front' => 'win', 'back' => 'پیروز شدن', 'pronunciation' => '/wɪn/']`.
 
 Quirks to know before touching them:
-- **Starter/File1/File2 silently discard `pronunciation`** (~2,465 cards get `audio = null`).
-  File3/4/5 store it as `audio => ['pronunciation' => ...]`. Same data, two behaviours.
-- `updateOrCreate` keys on `(static_deck_id, front, back)` with **no backing unique index**, so
+- All six now persist `pronunciation` into `audio` and use `firstOrNew`, so re-seeding
+  updates content **without** touching memory state (which no longer lives on those rows anyway).
+- The match key is `(static_deck_id, front, back)` with **no backing unique index**, so
   editing a translation creates a duplicate rather than updating.
-- Re-seeding **resets SRS scheduling** on every run.
-- `StaticCardSeeder.php` (1,039 lines) is **dead legacy code** — not registered in `DatabaseSeeder`.
-  It looks decks up by `lesson_number` without a level filter, which is the bug the `File*` split fixed.
 - `StaticDeckSeeder` never sets `category` or `sort_order`, so `StaticDeck::scopeByCategory()` matches
   nothing and `scopeOrdered()` degrades to name-only ordering.
+
+### Testing
+
+Tests run on **PostgreSQL** (`memflash_test`), not SQLite — the migrations use
+Postgres-native SQL, and testing on a different engine than you deploy on hides
+exactly that class of bug.
+
+> ⚠️ **`Tests\TestCase` refuses to run when the config is cached.** With a cached
+> config Laravel ignores `phpunit.xml`, so `RefreshDatabase` migrates and truncates
+> the **development** database. This wiped 66 decks and 4,999 cards twice during
+> development. If the suite aborts, run `php artisan config:clear`. The check sits
+> *before* `parent::setUp()` on purpose — `RefreshDatabase` fires from inside it.
+
+`tests/Pest.php` binds `Tests\TestCase` to `Feature` only. Unit tests stay unbound
+so the pure scheduler cannot quietly acquire a framework dependency.
+
+Factories are deliberately **not random** where randomness would make tests flaky:
+`DeckFactory::$is_public` is `false` with explicit `public()` / `private()` states,
+because `DeckPolicy::view()` passes for public decks and a random 30% made every
+authorization test fail about one run in three.
 
 ### HTTP layer
 
@@ -168,9 +261,15 @@ Auth is `App\Http\Middleware\AuthMiddleware` applied **by FQCN** in route groups
 `AdminAccess` *is* aliased as `admin.access` in `bootstrap/app.php` but that alias is unused — it's
 actually applied through `AdminPanelProvider::authMiddleware()`.
 
-No Form Requests (validation is inline in controllers), no Jobs/queues (CSV import up to 10 MB /
-2,000 cards runs synchronously in-request), no Actions. Two services: `DeckFileProcessor`,
-`DeckCsvExportService`.
+No Form Requests (validation is inline in controllers), no Actions. Services:
+`ReviewService`, `DeckFileProcessor`, `DeckCsvExportService`.
+
+**Queues** use the `database` driver — nothing extra to install. One job so far,
+`OptimizeFsrsParameters`. Reviews are scheduled **synchronously** in the request, so
+the app works fine with no worker running; only parameter fitting needs one. CSV
+import (10 MB / 2,000 cards) is also still synchronous. Scheduled tasks live in
+`routes/console.php`, driven by a single `schedule:run` cron entry.
+See `docs/DEPLOYMENT.md`.
 
 Filament admin (`/admin`) covers **only** `User`, `Deck`, `Card`. The entire static-content tree is
 seeder/DB-only.
@@ -194,14 +293,18 @@ any of these; several are load-bearing on assumptions I can't verify.
 
 ### Still open
 
-- **Static decks are global mutable state** (see the Architecture section). No authorization on
-  `StaticDeckController`, no level check, and studying rewrites shared rows. Fixing this properly
-  means moving static-card SRS state into a per-user table — a schema change, not a patch.
 - **No pagination anywhere** — dashboard, `decks.show`, and all static-deck views `get()`/`load()`
   collections that can reach 2,000 cards.
-- **`cards.interval` is nullable with no default**, and `CardController::store` creates cards with
-  only `front`/`back`, so manually added cards have `interval = NULL`.
-  `SpacedRepetitionService` floors it to 1, but a migration adding `default(1)` would be cleaner.
+- **The study UI does not yet show the interval per rating.** Both queue endpoints return
+  `intervals` (`{state, days, seconds}` per rating 1–4) and the offline mirror can compute
+  them, but no view renders them. Parts 8–9 of the spec (the review screen, card browser,
+  statistics, and the Archivo / Source Serif / IBM Plex Mono design system with decay-curve
+  sparklines) are **not built**.
+- **`StaticDeckController` still has no authorization or level check.** It is no longer
+  destructive to other users, but any authenticated user can study any static deck.
+- **No `POST /api/cards/{id}/forget` or undo endpoint.** `ReviewService::forget()` and
+  `forgetDeck()` exist and are tested; nothing routes to them. Undo must append a
+  compensating log row, never delete one.
 - **`App\Livewire\DeckList` is dead code** — the only Livewire component, never mounted. Queries
   *all* decks globally (not scoped to the user) and renders `$deck->title`/`$deck->description`,
   neither of which is a column.
