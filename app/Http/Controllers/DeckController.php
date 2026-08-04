@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Constants\DeckLimits;
 use App\Models\Deck;
-use App\Services\DeckFileProcessor;
 use App\Services\DeckCsvExportService;
+use App\Services\DeckFileProcessor;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -82,6 +83,15 @@ class DeckController extends Controller
                 'file.mimes' => 'File must be a CSV or Excel file (.csv, .xlsx, .xls).',
                 'file.max' => 'File size must be less than 10MB.',
             ]);
+        }
+
+        // DeckLimits::USER_MAX_DECKS was defined and exposed through
+        // User::hasReachedDeckLimit(), but never actually enforced on creation.
+        // Importing into an existing deck does not add one, so it is exempt.
+        if (in_array($importMode, ['empty', 'new'], true) && auth()->user()->hasReachedDeckLimit()) {
+            return back()->withErrors([
+                'name' => 'You have reached the maximum of ' . DeckLimits::USER_MAX_DECKS . ' decks. Delete a deck before creating another.',
+            ])->withInput();
         }
 
         try {

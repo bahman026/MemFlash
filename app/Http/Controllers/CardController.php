@@ -35,7 +35,7 @@ class CardController extends Controller
             'deck_id' => $deck->id,
             'deck_name' => $deck->name,
             'user_id' => auth()->id(),
-            'request_data' => $request->all()
+            'request_data' => $request->all(),
         ]);
 
         $this->authorize('update', $deck);
@@ -55,8 +55,9 @@ class CardController extends Controller
             Log::warning('Deck has reached card limit', [
                 'deck_id' => $deck->id,
                 'current_cards' => $deck->cards()->count(),
-                'max_cards' => \App\Constants\DeckLimits::USER_DECK_MAX_CARDS
+                'max_cards' => \App\Constants\DeckLimits::USER_DECK_MAX_CARDS,
             ]);
+
             return back()->withErrors(['card' => 'This deck has reached the maximum number of cards allowed.']);
         }
 
@@ -69,7 +70,7 @@ class CardController extends Controller
             'card_id' => $card->id,
             'deck_id' => $deck->id,
             'front' => $card->front,
-            'back' => $card->back
+            'back' => $card->back,
         ]);
 
         return redirect()->route('decks.show', $deck)->with('success', 'Card added successfully!');
