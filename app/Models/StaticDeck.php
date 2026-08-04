@@ -52,6 +52,8 @@ class StaticDeck extends Model
 
     /**
      * Get all cards for this static deck
+     *
+     * @return HasMany<StaticCard, $this>
      */
     public function cards(): HasMany
     {
@@ -60,6 +62,8 @@ class StaticDeck extends Model
 
     /**
      * Get all user progress for this static deck
+     *
+     * @return HasMany<UserStaticDeckProgress, $this>
      */
     public function userProgress(): HasMany
     {
@@ -68,6 +72,8 @@ class StaticDeck extends Model
 
     /**
      * Get user settings for this static deck
+     *
+     * @return HasMany<UserStaticDeckSetting, $this>
      */
     public function userSettings(): HasMany
     {

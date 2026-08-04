@@ -59,6 +59,8 @@ class Card extends Model
 
     /**
      * The deck this card belongs to
+     *
+     * @return BelongsTo<Deck, $this>
      */
     public function deck(): BelongsTo
     {

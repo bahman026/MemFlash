@@ -82,6 +82,8 @@ class User extends Authenticatable
 
     /**
      * Get the decks for the user.
+     *
+     * @return HasMany<Deck, $this>
      */
     public function decks(): HasMany
     {
@@ -90,10 +92,22 @@ class User extends Authenticatable
 
     /**
      * Get the user's progress on static decks
+     *
+     * @return HasMany<UserStaticDeckProgress, $this>
      */
     public function staticDeckProgress(): HasMany
     {
         return $this->hasMany(UserStaticDeckProgress::class);
+    }
+
+    /**
+     * Get the user's per-deck settings for static decks
+     *
+     * @return HasMany<UserStaticDeckSetting, $this>
+     */
+    public function staticDeckSettings(): HasMany
+    {
+        return $this->hasMany(UserStaticDeckSetting::class);
     }
 
     /**

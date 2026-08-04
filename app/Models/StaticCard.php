@@ -54,6 +54,8 @@ class StaticCard extends Model
 
     /**
      * The static deck this card belongs to
+     *
+     * @return BelongsTo<StaticDeck, $this>
      */
     public function staticDeck(): BelongsTo
     {
