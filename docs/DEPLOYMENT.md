@@ -1,60 +1,38 @@
-# Running queues and the scheduler on the server
+# Deployment
 
-MemFlash needs two background processes in production:
+**There is nothing to set up by hand.** `docker/entrypoint.sh` prepares the
+application on every container start and then hands PID 1 to `pm2-runtime`, which
+supervises three processes:
 
-| Process | What it does | Without it |
+| PM2 app | Command | Purpose |
 |---|---|---|
-| **Queue worker** | Runs jobs, currently FSRS parameter optimization | Jobs pile up in the `jobs` table and never run. Nothing else breaks. |
-| **Scheduler** | Fires cron-driven tasks (`fsrs:optimize`, queue pruning) | Parameters are never refitted; `job_batches` and `failed_jobs` grow forever. |
+| `php-fpm` | `php-fpm -F` | Serves requests |
+| `queue` | `artisan queue:work` | Runs jobs (FSRS optimization) |
+| `scheduler` | `artisan schedule:work` | Replaces cron entirely |
 
-Neither is required for studying. Reviews are scheduled synchronously in the
-request, so the app is fully usable with both stopped — which also means you can
-deploy them after the app is already live.
+Deploying is:
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+That is the whole procedure. No crontab, no systemd unit, no Supervisor config.
 
 ---
 
-## 1. Check what you are running
+## Why there is no cron entry
+
+`artisan schedule:work` is a long-running process that invokes `schedule:run` every
+minute by itself. Because PM2 keeps it alive, the usual
+`* * * * * php artisan schedule:run` line is unnecessary — and so is a cron daemon
+inside the container, which the `php:8.4-fpm` base image does not have.
+
+Scheduled tasks are declared in `routes/console.php`, not in a crontab:
 
 ```bash
-php artisan about --only=drivers
+docker compose exec app php artisan schedule:list
 ```
-
-Queue and cache are on the `database` driver, so there is **nothing extra to
-install** — no Redis, no Beanstalk. Jobs live in the `jobs` table created by the
-default migrations.
-
-Confirm the tables exist:
-
-```bash
-php artisan migrate --force
-php artisan queue:monitor default --max=100   # non-zero exit if the queue is backing up
-```
-
----
-
-## 2. The scheduler: exactly one cron entry
-
-Laravel does its own scheduling. The server needs **one** cron line, running every
-minute — not one line per task:
-
-```cron
-* * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
-```
-
-Install it for the user that owns the application files (matching the web user
-avoids permission problems on `storage/`):
-
-```bash
-sudo crontab -u www-data -e
-```
-
-Verify:
-
-```bash
-php artisan schedule:list
-```
-
-You should see:
 
 ```
 30 3 * * 1  php artisan fsrs:optimize
@@ -62,167 +40,132 @@ You should see:
 0  0 * * 0  php artisan queue:prune-failed --hours=168
 ```
 
-Tasks are defined in `routes/console.php`, not in crontab. Add new ones there.
+---
 
-### Inside Docker
+## What the entrypoint does, in order
 
-The `app` container runs php-fpm as PID 1 and has no cron daemon, so put the entry
-on the **host** and exec into the container:
+1. `composer install`
+2. Generates `APP_KEY` **only if empty** — without it every session-touching
+   request fails with `MissingAppKeyException` and only `/up` answers
+3. **Waits for PostgreSQL.** `depends_on` waits for the container, not for Postgres
+   to accept connections, so migrating immediately is a race on a cold boot
+4. `migrate --force` — pending migrations only, never `migrate:fresh`
+5. Seeds **only if `static_decks` is empty**
+6. Builds front-end assets if the Vite manifest is missing
+7. Removes a stale `public/hot`, which would make every page render unstyled
+8. `storage:link`, then `optimize`
+9. `exec pm2-runtime start docker/pm2.config.cjs`
 
-```cron
-* * * * * cd /path/to/MemFlash && docker compose exec -T app php artisan schedule:run >> /dev/null 2>&1
-```
-
-`-T` matters: without it Docker allocates a TTY and cron fails with
-`the input device is not a TTY`.
+Every step is idempotent and non-destructive. It runs on restarts of a live
+server, so it must never drop data — which is why step 4 is `migrate`, not
+`migrate:fresh`.
 
 ---
 
-## 3. The queue worker: keep it running
+## Configuration
 
-`php artisan queue:work` exits on error, on `queue:restart`, and when it hits its
-memory limit. It must be supervised so it comes back.
+All defaults are safe for production. Set these in `.env` or the compose
+environment.
 
-### Option A — systemd (recommended outside Docker)
+| Variable | Default | Effect |
+|---|---|---|
+| `RUN_WORKERS` | `true` | `false` serves web only — no queue, no scheduler |
+| `RUN_MIGRATIONS` | `true` | Apply pending migrations on boot |
+| `SEED_IF_EMPTY` | `true` | Seed only when there is no curriculum content |
+| `BUILD_ASSETS` | `missing` | `always` \| `missing` \| `never` |
+| `INSTALL_DEPS` | `true` | `composer install` on boot |
+| `CACHE_CONFIG` | `true` | `artisan optimize` |
+| `DB_WAIT_TIMEOUT` | `60` | Seconds to wait for the database |
+| `DB_FRESH_ON_BOOT` | `false` | ⚠️ **`true` destroys all data.** Local dev only |
 
-`/etc/systemd/system/memflash-worker.service`:
+### Scaling web separately from workers
 
-```ini
-[Unit]
-Description=MemFlash queue worker
-After=network.target postgresql.service
-
-[Service]
-User=www-data
-Group=www-data
-Restart=always
-RestartSec=5
-WorkingDirectory=/var/www/html
-
-# --timeout must exceed the job's own timeout (900s in OptimizeFsrsParameters),
-# or the worker kills a legitimate long optimization run mid-flight.
-ExecStart=/usr/bin/php /var/www/html/artisan queue:work \
-    --queue=default \
-    --sleep=3 \
-    --tries=1 \
-    --timeout=960 \
-    --max-time=3600
-
-# Recycle hourly so a leaked reference cannot grow unbounded.
-StandardOutput=append:/var/log/memflash/worker.log
-StandardError=append:/var/log/memflash/worker.log
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo mkdir -p /var/log/memflash && sudo chown www-data:www-data /var/log/memflash
-sudo systemctl daemon-reload
-sudo systemctl enable --now memflash-worker
-sudo systemctl status memflash-worker
-```
-
-One worker is plenty. Optimization is weekly and CPU-bound; a second worker would
-just compete for the same cores.
-
-### Option B — Supervisor
-
-The Dockerfile already installs nothing for this, but the entrypoint has a
-commented `supervisord` line, so this is the path of least surprise if you want
-both php-fpm and a worker in one container.
-
-`/etc/supervisor/conf.d/memflash-worker.conf`:
-
-```ini
-[program:memflash-worker]
-process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/html/artisan queue:work --tries=1 --timeout=960 --max-time=3600
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
-user=www-data
-numprocs=1
-redirect_stderr=true
-stdout_logfile=/var/log/memflash/worker.log
-stopwaitsecs=980
-```
-
-`stopwaitsecs` must exceed the job timeout, or Supervisor SIGKILLs a running
-optimization during a deploy.
-
-```bash
-sudo supervisorctl reread && sudo supervisorctl update
-sudo supervisorctl start memflash-worker:*
-```
-
-### Option C — a separate compose service
-
-Cleanest for Docker: reuse the app image with a different command.
+Running everything in one container is the trade for zero manual management. To
+split them, run a second service from the same image with `RUN_WORKERS=false` on
+the web one:
 
 ```yaml
   worker:
     image: articles
-    container_name: ${CONTAINER_NAME}_worker
     restart: unless-stopped
     working_dir: /var/www/html
     volumes:
       - ./:/var/www/html
-    # Bypass the entrypoint: it runs migrations and would race the app container.
-    entrypoint: ["php", "artisan", "queue:work", "--tries=1", "--timeout=960", "--max-time=3600"]
-    depends_on:
-      - db
-    networks:
-      - net
+    environment:
+      # Only one container should migrate; two racing can deadlock.
+      RUN_MIGRATIONS: "false"
+      SEED_IF_EMPTY: "false"
+      BUILD_ASSETS: "never"
+    depends_on: [db]
+    networks: [net]
 ```
 
-The `entrypoint` override is the important part — the default entrypoint runs
-migrations, and two containers migrating at once can deadlock.
+Both then run the same PM2 stack; set `RUN_WORKERS=false` on `app` so the queue is
+not consumed twice.
 
 ---
 
-## 4. Deploys must restart the worker
-
-A running worker holds **old code in memory**. After deploying:
+## Operating it
 
 ```bash
-php artisan queue:restart
+# Process health. The ↺ column is restart count -- persistently non-zero means
+# something is crash-looping.
+docker compose exec app pm2 list
+
+docker compose exec app pm2 describe queue
+docker compose exec app pm2 logs queue --lines 100
+docker compose exec app pm2 logs scheduler --lines 50
+
+# Restart one process without touching the others
+docker compose exec app pm2 restart queue
+
+# Queue state
+docker compose exec app php artisan queue:monitor default --max=100
+docker compose exec app php artisan queue:failed
+docker compose exec app php artisan queue:retry all
 ```
 
-This asks workers to finish the current job and exit; the supervisor restarts them
-on the new code. Without it a worker can run last week's code indefinitely.
+### Timeouts must stay ordered
 
-Order matters:
+```
+job timeout (900s)  <  worker --timeout (960s)  <  PM2 kill_timeout (980s)
+```
+
+`OptimizeFsrsParameters::$timeout` is 900s. If the worker's `--timeout` were lower
+the worker would kill its own job; if PM2's `kill_timeout` were lower, PM2 would
+SIGKILL a running optimization during a restart. All three live in
+`docker/pm2.config.cjs`, derived from one constant — change it there, not in three
+places.
+
+### Deploys and stale code
+
+A running worker holds old code in memory. `docker compose up -d --build` replaces
+the container so this resolves itself. If you ever reload code **without**
+recreating the container, run:
 
 ```bash
-php artisan down                # optional
-git pull && composer install --no-dev --optimize-autoloader
-npm ci && npm run build
-php artisan migrate --force
-php artisan optimize            # cache config, routes, views
-php artisan queue:restart       # AFTER optimize
-php artisan up
+docker compose exec app php artisan queue:restart
 ```
-
-> **Never run the test suite on the server after `optimize`.** A cached config
-> makes Laravel ignore `phpunit.xml`, so `RefreshDatabase` would migrate and
-> truncate the **production** database. `Tests\TestCase` now refuses to run in that
-> state, but do not rely on it — run tests in CI.
 
 ---
 
-## 5. Monitoring
+## Logs
 
-```bash
-# Pending and failed work
-php artisan queue:monitor default --max=100
-php artisan queue:failed
+| What | Where |
+|---|---|
+| Application | `storage/logs/laravel.log` |
+| PM2 + all three processes | `docker compose logs app` |
+| php-fpm errors | `storage/logs/php-fpm.log` |
+| php-fpm requests | `storage/logs/php-fpm-access.log` |
+| nginx | `docker compose logs webserver` |
 
-# Did the scheduler actually fire?
-grep fsrs:optimize /var/log/memflash/worker.log
-tail -f storage/logs/laravel.log | grep FSRS
-```
+php-fpm logs to files rather than stdout because the base image's `docker.conf`
+points `error_log` and `access.log` at `/proc/self/fd/2`. Under PM2 the child's
+stderr is a pipe, and php-fpm cannot open it — it fails at startup with
+`failed to open error_log (/proc/self/fd/2): No such device or address`.
+`docker/php/zzz-logs.conf` redirects both. Fatal startup messages are written to
+stderr *before* that log opens, so PM2 still captures them and they remain visible
+in `docker compose logs`.
 
 A successful optimization logs:
 
@@ -231,52 +174,74 @@ FSRS optimization complete {"deck":"1:personal:3","reviews":812,
   "log_loss":"0.34112 -> 0.31908","rmse":"0.04211 -> 0.02887","improved":true}
 ```
 
-`improved:false` means the fit was no better than the defaults and the defaults
+`improved:false` means the fit was no better than the defaults, and the defaults
 were kept. That is expected on small or very consistent histories.
-
-Retry a failed job after fixing the cause:
-
-```bash
-php artisan queue:retry all
-```
 
 ---
 
-## 6. Optimization in practice
+## Optimization in practice
 
-Parameters are fitted **per deck**, from that deck's own review log.
+Parameters are fitted **per deck** from that deck's own review log.
 
-- Below **400** usable reviews the command skips the deck. Fitting fewer produces
-  confident nonsense.
-- **1000+** gives a reliable fit; between 400 and 1000 the command warns.
-- "Usable" excludes each card's first review (nothing to predict from) and
-  same-day repeats (only the first review of a card per day counts).
-
-Trigger it manually:
+- Below **400** usable reviews the deck is skipped; a fit on less is confident nonsense
+- **1000+** is reliable; between 400 and 1000 the command warns
+- "Usable" excludes each card's first review (nothing to predict from) and same-day
+  repeats (only the first review of a card per day counts)
 
 ```bash
-php artisan fsrs:optimize --dry-run           # who is eligible, changes nothing
-php artisan fsrs:optimize                     # queue for every eligible deck
-php artisan fsrs:optimize --sync --deck=3     # run now and print the fit
-php artisan fsrs:optimize --user=1
+docker compose exec app php artisan fsrs:optimize --dry-run       # who is eligible
+docker compose exec app php artisan fsrs:optimize                 # queue everything eligible
+docker compose exec app php artisan fsrs:optimize --sync --deck=3 # run now, print the fit
 ```
 
-`--sync` bypasses the queue, so you do not need a worker to try it.
+`--sync` bypasses the queue, so it works even with `RUN_WORKERS=false`.
 
-Because `review_logs` is append-only, optimization can always be re-run and never
-loses history. If a fit makes scheduling worse, reset that deck's `parameters` to
+`review_logs` is append-only, so optimization can always be re-run and never loses
+history. If a fit makes scheduling worse, reset that deck's `parameters` to
 `App\Fsrs\Parameters::DEFAULTS` and the next run starts fresh.
 
 ---
 
-## 7. Troubleshooting
+## Never run the test suite on the server
+
+With a cached config Laravel ignores `phpunit.xml`, so `RefreshDatabase` migrates
+and truncates whatever database the cache names — **production**. The entrypoint
+runs `artisan optimize`, so a deployed container is always in that state.
+
+`Tests\TestCase` refuses to run when the config is cached or the database is not
+`memflash_test`, but treat that as a backstop. Run tests in CI.
+
+---
+
+## Troubleshooting
 
 | Symptom | Cause |
 |---|---|
-| Jobs stay `pending` forever | No worker running. `systemctl status memflash-worker`. |
-| `the input device is not a TTY` | Missing `-T` on `docker compose exec` in cron. |
-| Worker runs old code after deploy | Missing `php artisan queue:restart`. |
-| Optimization killed part-way | Worker `--timeout` below the job's 900s. |
-| `fsrs:optimize` skips everything | Fewer than 400 usable reviews per deck. Check `php artisan tinker --execute='echo App\Models\ReviewLog::count();'` |
-| Scheduler never fires | Cron installed for the wrong user, or the path in the crontab is wrong. Test with `php artisan schedule:run` by hand. |
-| `UniqueConstraintViolation` on `jobs` | Two schedulers running. `onOneServer()` needs a shared cache — with the `database` cache driver that is already satisfied. |
+| Jobs stay pending | `pm2 list` — is `queue` online? Check `RUN_WORKERS`. |
+| `php-fpm` restart count climbing | Read `docker compose logs app`. A config error in `php-fpm.d/` fails at startup. |
+| `failed to open error_log (/proc/self/fd/2)` | `docker/php/zzz-logs.conf` missing from the image. Rebuild. |
+| Scheduler never fires | `pm2 describe scheduler`. Args must be `schedule:work`. |
+| Optimization killed part-way | A timeout out of order — see above. |
+| `fsrs:optimize` skips everything | Fewer than 400 usable reviews per deck. |
+| Unstyled pages | Stale `public/hot`, or no Vite manifest. The entrypoint handles both; try `BUILD_ASSETS=always`. |
+| `MissingAppKeyException` | `APP_KEY` empty **and** `.env` not writable, so the entrypoint could not generate one. |
+| Entrypoint change has no effect | It is baked into the image (`Dockerfile`), not the volume. Rebuild with `--build`. |
+| PM2 config throws on `module.exports` | The file must stay `.cjs`; `package.json` declares `"type": "module"`. |
+
+---
+
+## Without Docker
+
+The entrypoint assumes a container. On bare metal, install PM2 and use the same
+config, which is not Docker-specific:
+
+```bash
+npm install -g pm2@6
+cd /var/www/html
+pm2 start docker/pm2.config.cjs
+pm2 save                  # restore the process list after a reboot
+pm2 startup               # prints the systemd command to run for boot persistence
+```
+
+`pm2 save` plus `pm2 startup` replaces a systemd unit per process. Everything in
+the operating and troubleshooting sections applies, minus `docker compose exec`.

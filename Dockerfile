@@ -40,6 +40,12 @@ RUN pecl install redis && docker-php-ext-enable redis
 RUN curl -sL https://deb.nodesource.com/setup_20.x | bash -
 RUN apt-get install -y nodejs
 
+# PM2 supervises php-fpm, the queue worker and the scheduler inside this
+# container. pm2-runtime becomes PID 1 via the entrypoint, so no cron daemon and
+# no separate process manager is needed. Pinned so an image rebuild cannot pick up
+# a breaking major release on its own.
+RUN npm install -g pm2@6.0.13 && pm2 --version
+
 RUN  apt-get install -y fish
 RUN  chsh -s 'which fish'
 
@@ -50,6 +56,10 @@ RUN groupmod -g $gid www-data
 
 RUN mkdir -p "/var/www/.npm"
 RUN chown -R $uid:$gid "/var/www/.npm"
+
+# php-fpm cannot write to /proc/self/fd/2 when supervised by PM2, so redirect its
+# error log to a file. Copied before the app so a source change does not rebuild it.
+COPY ./docker/php/zzz-logs.conf /usr/local/etc/php-fpm.d/zzz-logs.conf
 
 COPY . /var/www/html
 

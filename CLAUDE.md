@@ -26,16 +26,39 @@ docker compose exec app php artisan <cmd>
 docker compose exec db psql -U memflash -d memflash_db
 ```
 
-### The entrypoint is now non-destructive (was not, before 2026-08-04)
+### The entrypoint is self-managing, and non-destructive (it was not, before 2026-08-04)
 
 `docker/entrypoint.sh` runs on **every** container start, so it must never be destructive. It used to
 run `migrate:fresh --seed --force`, which dropped every table on each `docker compose up` and wiped
-all user decks/cards/progress. It now:
+all user decks/cards/progress. It now prepares everything and hands PID 1 to **`pm2-runtime`**, which
+supervises `php-fpm`, `queue` (`queue:work`) and `scheduler` (`schedule:work`).
+
+**There is no crontab anywhere.** `schedule:work` is a long-running process that calls `schedule:run`
+itself every minute, and PM2 keeps it alive. Scheduled tasks live in `routes/console.php`.
+
+Deploying is `docker compose up -d --build`. Nothing else.
 
 1. Generates `APP_KEY` only when it is empty.
-2. Runs `migrate --force` — pending migrations only, existing rows preserved.
-3. Seeds **only when `static_decks` is empty**, so a fresh DB self-bootstraps and a seeded one is
+2. **Waits for Postgres** — `depends_on` waits for the container, not for the server to accept
+   connections, so migrating immediately is a race on a cold boot.
+3. Runs `migrate --force` — pending migrations only, existing rows preserved.
+4. Seeds **only when `static_decks` is empty**, so a fresh DB self-bootstraps and a seeded one is
    left alone.
+5. Builds assets if the Vite manifest is missing, and removes a stale `public/hot`.
+
+Behaviour is env-driven: `RUN_WORKERS`, `RUN_MIGRATIONS`, `SEED_IF_EMPTY`, `BUILD_ASSETS`,
+`INSTALL_DEPS`, `CACHE_CONFIG`, `DB_WAIT_TIMEOUT`, `DB_FRESH_ON_BOOT`. See `docs/DEPLOYMENT.md`.
+
+Two things that will bite you if changed carelessly:
+
+- **`docker/pm2.config.cjs` must stay `.cjs`.** `package.json` declares `"type": "module"`, so a
+  `.js` config is parsed as ESM and `module.exports` throws.
+- **Timeout ordering:** job 900s < worker `--timeout` 960s < PM2 `kill_timeout` 980s. All three
+  derive from one constant in that file. Break the order and a long optimization gets killed
+  part-way.
+- **php-fpm logs to files, not stdout** (`storage/logs/php-fpm.log`). The base image points
+  `error_log`/`access.log` at `/proc/self/fd/2`, which php-fpm cannot open when its stderr is a PM2
+  pipe — it crash-loops with `failed to open error_log`. `docker/php/zzz-logs.conf` redirects both.
 
 Both guards matter. Plain `migrate` alone is not enough: every `StaticCard*Seeder::seedVocabulary()`
 writes `interval => 1, revised_at => null, last_reviewed => null`, so an unconditional `db:seed`
