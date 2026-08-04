@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Constants\DeckLimits;
+use App\Fsrs\CardState;
 use App\Models\Card;
 use App\Models\Deck;
 use Illuminate\Http\UploadedFile;
@@ -273,7 +274,10 @@ class DeckFileProcessor
                     'deck_id' => $deck->id,
                     'front' => $cardData['front'],
                     'back' => $cardData['back'],
-                    'interval' => 1,
+                    // No memory state: FSRS derives stability and difficulty from
+                    // the first rating, so an imported card starts as New.
+                    'state' => CardState::New,
+                    'due' => now(),
                 ]);
                 $newCards++;
                 Log::debug("Created new card: '{$cardData['front']}' -> '{$cardData['back']}'");
@@ -310,7 +314,8 @@ class DeckFileProcessor
                 'deck_id' => $deck->id,
                 'front' => $cardData['front'],
                 'back' => $cardData['back'],
-                'interval' => 1,
+                'state' => CardState::New->value,
+                'due' => now(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

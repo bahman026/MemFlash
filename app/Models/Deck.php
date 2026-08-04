@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * App\Models\Deck
@@ -67,6 +68,33 @@ class Deck extends Model
     }
 
     /**
+     * The FSRS scheduling preset for this deck.
+     *
+     * @return HasOne<DeckConfig, $this>
+     */
+    public function config(): HasOne
+    {
+        return $this->hasOne(DeckConfig::class);
+    }
+
+    /**
+     * The preset, created with the FSRS-6 defaults if it does not exist yet.
+     *
+     * firstOrCreate rather than create: the `config` relation may already be
+     * loaded and cached as null from before the row existed, and a plain create()
+     * would then violate the unique index on deck_id. Setting the relation
+     * afterwards keeps the in-memory model consistent with the database.
+     */
+    public function configOrDefault(): DeckConfig
+    {
+        $config = $this->config ?? $this->config()->firstOrCreate([], DeckConfig::defaults());
+
+        $this->setRelation('config', $config);
+
+        return $config;
+    }
+
+    /**
      * Check if the deck has reached its maximum card limit
      *
      * Compares against DeckLimits::USER_DECK_MAX_CARDS. This used to read a
@@ -88,20 +116,15 @@ class Deck extends Model
     }
 
     /**
-     * Reset spaced-repetition scheduling for every card in this deck.
+     * Return every card in this deck to the New state.
      *
-     * Counterpart to StaticDeck::resetLearningProgress(). DeckController::reset()
-     * has always called this method, but it was never implemented -- so
-     * POST /decks/{deck}/reset threw BadMethodCallException (HTTP 500).
+     * Memory is cleared, not rewound: FSRS has no meaningful "initial" stability
+     * before a first answer, so stability and difficulty go back to null and are
+     * derived again from the next rating. Rows in review_logs are left intact --
+     * the log is append-only and the optimizer still needs the history.
      */
     public function resetLearningProgress(): void
     {
-        $this->cards()->update([
-            'interval' => 1,
-            'ease_factor' => 2.5,
-            'repetitions' => 0,
-            'revised_at' => null,
-            'last_reviewed' => null,
-        ]);
+        $this->cards()->update(Card::forgottenState());
     }
 }

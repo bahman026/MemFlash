@@ -111,6 +111,24 @@ class User extends Authenticatable
     }
 
     /**
+     * This user's FSRS memory of shared curriculum cards.
+     *
+     * @return HasMany<UserStaticCardState, $this>
+     */
+    public function staticCardStates(): HasMany
+    {
+        return $this->hasMany(UserStaticCardState::class);
+    }
+
+    /**
+     * @return HasMany<ReviewLog, $this>
+     */
+    public function reviewLogs(): HasMany
+    {
+        return $this->hasMany(ReviewLog::class);
+    }
+
+    /**
      * Get static decks appropriate for user's level
      */
     public function getRecommendedStaticDecks()

@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends Factory<StaticCard>
+ *
+ * Static cards hold no memory state: it is per learner and lives on
+ * user_static_card_states. Use UserStaticCardStateFactory for scheduling state.
  */
 class StaticCardFactory extends Factory
 {
@@ -25,33 +28,16 @@ class StaticCardFactory extends Factory
             'front' => $this->faker->word(),
             'back' => $this->faker->word(),
             'audio' => null,
-            'interval' => 1,
-            'ease_factor' => 2.5,
-            'repetitions' => 0,
-            'revised_at' => null,
-            'last_reviewed' => null,
         ];
     }
 
     /**
-     * A card that is due for review right now.
+     * With an IPA pronunciation, the way the curriculum seeders store it.
      */
-    public function due(): static
+    public function withPronunciation(string $ipa = '/wɪn/'): static
     {
         return $this->state(fn (array $attributes): array => [
-            'revised_at' => now()->subDay(),
-            'last_reviewed' => now()->subDays(2),
-        ]);
-    }
-
-    /**
-     * A card scheduled well into the future.
-     */
-    public function notDue(): static
-    {
-        return $this->state(fn (array $attributes): array => [
-            'revised_at' => now()->addWeek(),
-            'last_reviewed' => now(),
+            'audio' => ['pronunciation' => $ipa],
         ]);
     }
 }

@@ -22,15 +22,27 @@ class CardsTable
                     ->searchable(),
                 TextColumn::make('back')
                     ->searchable(),
-                TextColumn::make('interval')
+                TextColumn::make('state')
+                    ->badge()
+                    ->sortable(),
+                TextColumn::make('stability')
+                    ->label('S')
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable(),
+                TextColumn::make('difficulty')
+                    ->label('D')
+                    ->numeric(decimalPlaces: 2)
+                    ->sortable(),
+                TextColumn::make('lapses')
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('revised_at')
+                TextColumn::make('due')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('last_reviewed')
+                TextColumn::make('last_review')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

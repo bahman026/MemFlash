@@ -113,17 +113,34 @@ class StaticDeck extends Model
     }
 
     /**
-     * Reset learning progress for all cards in this static deck
-     * This will reset intervals, ease_factor, repetitions, revised_at, and last_reviewed timestamps
+     * Reset one user's progress through this deck.
+     *
+     * Takes a User on purpose. The previous version wrote to the shared
+     * static_cards rows, so a single learner pressing "reset" rewound the
+     * schedule for every other user of the deck. Memory now lives on
+     * user_static_card_states, and only that user's rows are touched.
+     *
+     * review_logs is append-only and is deliberately left alone.
+     *
+     * @return int rows affected
      */
-    public function resetLearningProgress(): void
+    public function resetLearningProgressFor(User $user): int
     {
-        $this->cards()->update([
-            'interval' => 1,
-            'ease_factor' => 2.5,
-            'repetitions' => 0,
-            'revised_at' => null,
-            'last_reviewed' => null,
-        ]);
+        return UserStaticCardState::query()
+            ->where('user_id', $user->id)
+            ->whereIn('static_card_id', $this->cards()->select('id'))
+            ->update(UserStaticCardState::forgottenState());
+    }
+
+    /**
+     * How many cards of this deck the user has memory state for.
+     */
+    public function startedCountFor(User $user): int
+    {
+        return UserStaticCardState::query()
+            ->where('user_id', $user->id)
+            ->whereIn('static_card_id', $this->cards()->select('id'))
+            ->where('reps', '>', 0)
+            ->count();
     }
 }

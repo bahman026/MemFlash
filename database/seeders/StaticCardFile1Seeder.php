@@ -1165,14 +1165,6 @@ class StaticCardFile1Seeder extends Seeder
                 ? ['pronunciation' => $cardData['pronunciation']]
                 : null;
 
-            // Initialise scheduling for new cards only. Writing these on every run
-            // reset interval/revised_at and wiped study progress on re-seed.
-            if (! $card->exists) {
-                $card->interval = 1;
-                $card->revised_at = null;
-                $card->last_reviewed = null;
-            }
-
             $card->save();
         }
 

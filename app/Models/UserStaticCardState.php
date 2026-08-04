@@ -7,24 +7,18 @@ namespace App\Models;
 use App\Fsrs\CardState;
 use App\Models\Concerns\HasFsrsMemory;
 use Carbon\Carbon;
-use Database\Factories\CardFactory;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
- * App\Models\Card
+ * App\Models\UserStaticCardState
  *
- * A card in a personal deck. Memory state lives on this row because the deck
- * belongs to exactly one user.
+ * One learner's FSRS memory of one shared curriculum card.
  *
  * @property positive-int $id
- * @property positive-int $deck_id
- * @property string $front
- * @property string $back
- * @property array|null $audio
+ * @property positive-int $user_id
+ * @property positive-int $static_card_id
  * @property CardState $state
  * @property int|null $step
  * @property float|null $stability
@@ -34,23 +28,19 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property int $reps
  * @property int $lapses
  * @property bool $suspended
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * @property-read Deck $deck
+ * @property-read User $user
+ * @property-read StaticCard $staticCard
  */
-class Card extends Model
+class UserStaticCardState extends Model
 {
-    /** @use HasFactory<CardFactory> */
-    use HasFactory;
-
     use HasFsrsMemory;
 
     /**
      * Model-level defaults, not just database defaults.
      *
-     * Without these a freshly created card has `state` null in memory until it is
-     * refreshed, and reading ->state->value on it is a fatal error. The column
-     * default only applies inside the database.
+     * A row created without these would come back with `state` null in memory
+     * until refreshed, and reading ->state->value on it is a fatal error. The
+     * column default only applies inside the database.
      *
      * @var array<string, mixed>
      */
@@ -62,10 +52,8 @@ class Card extends Model
     ];
 
     protected $fillable = [
-        'deck_id',
-        'front',
-        'back',
-        'audio',
+        'user_id',
+        'static_card_id',
         'state',
         'step',
         'stability',
@@ -77,38 +65,29 @@ class Card extends Model
         'suspended',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
-        return ['audio' => 'array'] + $this->fsrsCasts();
+        return $this->fsrsCasts();
     }
 
     /**
-     * The deck this card belongs to
-     *
-     * @return BelongsTo<Deck, $this>
+     * @return BelongsTo<User, $this>
      */
-    public function deck(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Deck::class);
+        return $this->belongsTo(User::class);
     }
 
     /**
-     * @return MorphMany<ReviewLog, $this>
+     * @return BelongsTo<StaticCard, $this>
      */
-    public function reviewLogs(): MorphMany
+    public function staticCard(): BelongsTo
     {
-        return $this->morphMany(ReviewLog::class, 'reviewable');
+        return $this->belongsTo(StaticCard::class);
     }
 
     /**
-     * Cards ready to be studied: never scheduled, or due on or before $at.
-     *
-     * @param  Builder<Card>  $query
+     * @param  Builder<UserStaticCardState>  $query
      */
     public function scopeDue(Builder $query, ?\DateTimeInterface $at = null): void
     {
@@ -119,9 +98,7 @@ class Card extends Model
     }
 
     /**
-     * Learning and relearning cards first, then the most overdue.
-     *
-     * @param  Builder<Card>  $query
+     * @param  Builder<UserStaticCardState>  $query
      */
     public function scopeQueueOrder(Builder $query): void
     {

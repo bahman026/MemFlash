@@ -4,14 +4,11 @@
 ])
 
 @php
-    $dueCards = $deck->cards()
-        ->where(function ($query) {
-            $query->whereNull('revised_at')
-                ->orWhere('revised_at', '<=', now());
-        })
-        ->count();
+    // `due()` is the shared FSRS scope: never scheduled, or due on or before now,
+    // and not suspended.
+    $dueCards = $deck->cards()->due()->count();
     $totalCards = $deck->cards()->count();
-    $studiedCards = $deck->cards()->whereNotNull('last_reviewed')->count();
+    $studiedCards = $deck->cards()->where('reps', '>', 0)->count();
     $progressPercentage = $totalCards > 0 ? ($studiedCards / $totalCards) * 100 : 0;
 @endphp
 

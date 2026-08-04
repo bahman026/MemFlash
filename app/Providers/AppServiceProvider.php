@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Fsrs\Fuzz\FuzzSource;
+use App\Fsrs\Fuzz\RandomFuzzSource;
 use App\Models\Deck;
 use App\Policies\DeckPolicy;
 use Illuminate\Support\Facades\Gate;
@@ -16,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Interval fuzz is injected rather than reached for globally, so tests can
+        // make scheduling deterministic and compare against the reference vectors.
+        $this->app->bind(FuzzSource::class, RandomFuzzSource::class);
     }
 
     /**

@@ -5,29 +5,35 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Carbon\Carbon;
+use Database\Factories\StaticCardFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * App\Models\StaticCard
+ *
+ * Shared curriculum content. This row holds no memory state at all: stability,
+ * difficulty and the due date belong to a specific learner, so they live on
+ * user_static_card_states instead.
+ *
+ * Those columns used to sit here, which meant one user studying a lesson -- or
+ * resetting it -- rewrote the schedule every other user saw.
  *
  * @property positive-int $id
  * @property positive-int $static_deck_id
  * @property string $front
  * @property string $back
  * @property array|null $audio
- * @property int $interval
- * @property float $ease_factor
- * @property int $repetitions
- * @property Carbon|null $revised_at
- * @property Carbon|null $last_reviewed
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read StaticDeck $staticDeck
  */
 class StaticCard extends Model
 {
+    /** @use HasFactory<StaticCardFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -35,20 +41,12 @@ class StaticCard extends Model
         'front',
         'back',
         'audio',
-        'interval',
-        'ease_factor',
-        'repetitions',
-        'revised_at',
-        'last_reviewed',
     ];
 
     protected function casts(): array
     {
         return [
             'audio' => 'array',
-            'ease_factor' => 'decimal:2',
-            'revised_at' => 'datetime',
-            'last_reviewed' => 'datetime',
         ];
     }
 
@@ -63,25 +61,39 @@ class StaticCard extends Model
     }
 
     /**
-     * Check if the card is due for review
+     * Per-user memory state for this card.
+     *
+     * @return HasMany<UserStaticCardState, $this>
      */
-    public function isDue(): bool
+    public function states(): HasMany
     {
-        if (! $this->revised_at) {
-            return true; // New cards are always due
-        }
-
-        return $this->revised_at->isPast();
+        return $this->hasMany(UserStaticCardState::class);
     }
 
     /**
-     * Reset review schedule (for new copy)
+     * @return MorphMany<ReviewLog, $this>
      */
-    public function resetSchedule(): void
+    public function reviewLogs(): MorphMany
     {
-        $this->interval = 1;
-        $this->revised_at = null;
-        $this->last_reviewed = null;
-        $this->save();
+        return $this->morphMany(ReviewLog::class, 'reviewable');
+    }
+
+    /**
+     * This user's memory state, created on first use.
+     */
+    public function stateFor(User $user): UserStaticCardState
+    {
+        return $this->states()->firstOrCreate(
+            ['user_id' => $user->id],
+            UserStaticCardState::forgottenState(),
+        );
+    }
+
+    /**
+     * The IPA pronunciation stored in the audio payload, when present.
+     */
+    public function pronunciation(): ?string
+    {
+        return $this->audio['pronunciation'] ?? null;
     }
 }

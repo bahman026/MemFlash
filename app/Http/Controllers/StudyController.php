@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Fsrs\Rating;
 use App\Models\Card;
 use App\Models\Deck;
-use App\Services\SpacedRepetitionService;
+use App\Services\ReviewService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class StudyController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        private readonly SpacedRepetitionService $spacedRepetition,
+        private readonly ReviewService $reviews,
     ) {}
 
     /**
@@ -33,49 +34,53 @@ class StudyController extends Controller
     }
 
     /**
-     * Get cards for study session
+     * Get cards for study session.
+     *
+     * Ordering is decided here, not by the client: learning and relearning cards
+     * come first, then review cards by due date, then new cards.
      */
-    public function getCards(Deck $deck): JsonResponse
+    public function getCards(Request $request, Deck $deck): JsonResponse
     {
         $this->authorize('view', $deck);
 
         try {
-            // Get new cards per day from deck settings
-            $newCardsPerDay = $deck->new_cards_per_day ?? 10;
+            $limit = $deck->new_cards_per_day ?? 10;
+            $user = $request->user();
 
-            // Get cards that are due for review (revised_at is null or in the past)
             $dueCards = $deck->cards()
-                ->where(function ($query) {
-                    $query->whereNull('revised_at')
-                        ->orWhere('revised_at', '<=', now());
-                })
-                ->orderByRaw('CASE WHEN revised_at IS NULL THEN 0 ELSE 1 END')
-                ->orderBy('revised_at', 'asc') // New cards (null) first, then by due date
-                ->limit($newCardsPerDay)
+                ->due()
+                ->queueOrder()
+                ->limit($limit)
                 ->get();
 
-            $cards = $dueCards->map(function ($card) {
-                return [
-                    'id' => $card->id,
-                    'front' => $card->front,
-                    'back' => $card->back,
-                    'interval' => $card->interval,
-                    'revised_at' => $card->revised_at,
-                    'last_reviewed' => $card->last_reviewed,
-                ];
-            });
-
-            $deckInfo = [
-                'id' => $deck->id,
-                'name' => $deck->name,
-                'total_cards' => $deck->cards()->count(),
-                'new_cards_per_day' => $newCardsPerDay,
-                'cards_loaded' => $cards->count(),
-            ];
+            $cards = $dueCards->map(fn (Card $card): array => [
+                'id' => $card->id,
+                'front' => $card->front,
+                'back' => $card->back,
+                'audio' => $card->audio,
+                'state' => $card->state->value,
+                'stability' => $card->stability,
+                'difficulty' => $card->difficulty,
+                // Derived on read, never stored.
+                'retrievability' => $card->retrievability(),
+                'due' => $card->due,
+                'last_review' => $card->last_review,
+                'reps' => $card->reps,
+                'lapses' => $card->lapses,
+                // What each button would schedule, so the UI needs no second call.
+                'intervals' => $this->reviews->previewIntervals($user, $card),
+            ]);
 
             return response()->json([
                 'cards' => $cards,
-                'deck' => $deckInfo,
+                'deck' => [
+                    'id' => $deck->id,
+                    'name' => $deck->name,
+                    'total_cards' => $deck->cards()->count(),
+                    'new_cards_per_day' => $limit,
+                    'cards_loaded' => $cards->count(),
+                    'desired_retention' => $deck->configOrDefault()->desired_retention,
+                ],
             ]);
 
         } catch (\Exception $e) {
@@ -92,19 +97,32 @@ class StudyController extends Controller
         // DeckPolicy::view() also passes for public decks owned by someone else.
         $this->authorize('update', $card->deck);
 
-        $request->validate([
-            'quality' => 'required|integer|min:0|max:3', // 0=Again, 1=Hard, 2=Good, 3=Easy
+        $validated = $request->validate([
+            // 1=Again, 2=Hard, 3=Good, 4=Easy. Hard is a pass, not a failure.
+            'rating' => 'required|integer|min:1|max:4',
+            'review_duration_ms' => 'nullable|integer|min:0',
+            'client_uuid' => 'nullable|uuid',
         ]);
 
         try {
-            $this->spacedRepetition->review($card, (int) $request->input('quality'));
+            $outcome = $this->reviews->reviewCard(
+                user: $request->user(),
+                card: $card,
+                rating: Rating::from((int) $validated['rating']),
+                durationMs: $validated['review_duration_ms'] ?? null,
+                clientUuid: $validated['client_uuid'] ?? null,
+            );
 
             return response()->json([
                 'success' => true,
                 'card' => [
                     'id' => $card->id,
-                    'revised_at' => $card->revised_at,
-                    'last_reviewed' => $card->last_reviewed,
+                    'state' => $outcome->state->value,
+                    'stability' => $outcome->stability,
+                    'difficulty' => $outcome->difficulty,
+                    'due' => $outcome->due,
+                    'last_review' => $outcome->lastReview,
+                    'scheduled_days' => $outcome->scheduledDays,
                 ],
             ]);
 
@@ -118,13 +136,15 @@ class StudyController extends Controller
      */
     public function batchUpdate(Request $request): JsonResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'updates' => 'required|array',
             'updates.*.card_id' => 'required|integer|exists:cards,id',
-            'updates.*.quality' => 'required|integer|min:0|max:3',
+            'updates.*.rating' => 'required|integer|min:1|max:4',
+            'updates.*.review_duration_ms' => 'nullable|integer|min:0',
+            'updates.*.client_uuid' => 'nullable|uuid',
         ]);
 
-        $updates = $request->input('updates');
+        $updates = $validated['updates'];
 
         // Authorize every card up front, outside the try/catch below.
         // AuthorizationException extends Exception, so authorizing inside the try
@@ -142,6 +162,7 @@ class StudyController extends Controller
         }
 
         try {
+            $user = $request->user();
             $updatedCards = [];
 
             foreach ($updates as $update) {
@@ -150,12 +171,20 @@ class StudyController extends Controller
                     continue;
                 }
 
-                $this->spacedRepetition->review($card, (int) $update['quality']);
+                $outcome = $this->reviews->reviewCard(
+                    user: $user,
+                    card: $card,
+                    rating: Rating::from((int) $update['rating']),
+                    durationMs: $update['review_duration_ms'] ?? null,
+                    clientUuid: $update['client_uuid'] ?? null,
+                );
 
                 $updatedCards[] = [
                     'id' => $card->id,
-                    'revised_at' => $card->revised_at,
-                    'last_reviewed' => $card->last_reviewed,
+                    'state' => $outcome->state->value,
+                    'due' => $outcome->due,
+                    'last_review' => $outcome->lastReview,
+                    'scheduled_days' => $outcome->scheduledDays,
                 ];
             }
 

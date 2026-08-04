@@ -5,30 +5,26 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Fsrs\CardState;
-use App\Models\Card;
-use App\Models\Deck;
+use App\Models\StaticCard;
+use App\Models\User;
+use App\Models\UserStaticCardState;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Card>
+ * @extends Factory<UserStaticCardState>
  */
-class CardFactory extends Factory
+class UserStaticCardStateFactory extends Factory
 {
-    protected $model = Card::class;
+    protected $model = UserStaticCardState::class;
 
     /**
-     * A brand new card carries no memory at all: stability and difficulty stay
-     * null until the first rating derives them.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'deck_id' => Deck::factory(), // create a deck if none exists
-            'front' => $this->faker->sentence(3),
-            'back' => $this->faker->sentence(6),
-            'audio' => null, // optional, can later store a path or base64
+            'user_id' => User::factory(),
+            'static_card_id' => StaticCard::factory(),
             'state' => CardState::New,
             'step' => null,
             'stability' => null,
@@ -41,9 +37,6 @@ class CardFactory extends Factory
         ];
     }
 
-    /**
-     * In the Review state and due now.
-     */
     public function due(float $stability = 10.0, float $difficulty = 5.0): static
     {
         return $this->state(fn (array $attributes): array => [
@@ -56,9 +49,6 @@ class CardFactory extends Factory
         ]);
     }
 
-    /**
-     * In the Review state and scheduled well into the future.
-     */
     public function notDue(float $stability = 30.0, float $difficulty = 5.0): static
     {
         return $this->state(fn (array $attributes): array => [
@@ -69,10 +59,5 @@ class CardFactory extends Factory
             'last_review' => now(),
             'reps' => 5,
         ]);
-    }
-
-    public function suspended(): static
-    {
-        return $this->state(fn (array $attributes): array => ['suspended' => true]);
     }
 }

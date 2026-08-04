@@ -108,14 +108,14 @@ class StudySession {
         document.getElementById('exit-fullscreen-btn').addEventListener('click', () => this.closeFullscreen());
         document.getElementById('fullscreen-speak-btn').addEventListener('click', () => this.playAudio());
         document.getElementById('fullscreen-show-answer-btn').addEventListener('click', () => this.showFullscreenAnswer());
-        document.getElementById('again-btn').addEventListener('click', () => this.rateCard(0));
-        document.getElementById('hard-btn').addEventListener('click', () => this.rateCard(1));
-        document.getElementById('good-btn').addEventListener('click', () => this.rateCard(2));
-        document.getElementById('easy-btn').addEventListener('click', () => this.rateCard(3));
-        document.getElementById('fullscreen-again-btn').addEventListener('click', () => this.rateCard(0));
-        document.getElementById('fullscreen-hard-btn').addEventListener('click', () => this.rateCard(1));
-        document.getElementById('fullscreen-good-btn').addEventListener('click', () => this.rateCard(2));
-        document.getElementById('fullscreen-easy-btn').addEventListener('click', () => this.rateCard(3));
+        document.getElementById('again-btn').addEventListener('click', () => this.rateCard(1));
+        document.getElementById('hard-btn').addEventListener('click', () => this.rateCard(2));
+        document.getElementById('good-btn').addEventListener('click', () => this.rateCard(3));
+        document.getElementById('easy-btn').addEventListener('click', () => this.rateCard(4));
+        document.getElementById('fullscreen-again-btn').addEventListener('click', () => this.rateCard(1));
+        document.getElementById('fullscreen-hard-btn').addEventListener('click', () => this.rateCard(2));
+        document.getElementById('fullscreen-good-btn').addEventListener('click', () => this.rateCard(3));
+        document.getElementById('fullscreen-easy-btn').addEventListener('click', () => this.rateCard(4));
         document.getElementById('restart-session').addEventListener('click', () => this.restartSession());
         document.getElementById('retry-btn').addEventListener('click', () => this.init());
         
@@ -128,6 +128,10 @@ class StudySession {
     }
 
     showCurrentCard() {
+        // Start the clock for review_duration_ms; the server records how long each
+        // answer took so the deck list can estimate today's workload in minutes.
+        this.cardShownAt = Date.now();
+
         console.log('showCurrentCard called, cards length:', this.cards.length);
         console.log('Current card index:', this.currentCardIndex);
 
@@ -182,7 +186,7 @@ class StudySession {
         this.isAnswerShown = true;
     }
 
-    async rateCard(quality) {
+    async rateCard(rating) {
         if (this.cards.length === 0) return;
 
         const card = this.cards[this.currentCardIndex];
@@ -190,11 +194,12 @@ class StudySession {
         // Add to pending updates
         this.pendingUpdates.push({
             card_id: card.id,
-            quality: quality
+            rating: rating,
+            review_duration_ms: this.cardShownAt ? Date.now() - this.cardShownAt : null
         });
 
-        // Handle card based on quality according to the algorithm
-        if (quality === 3) {
+        // Easy removes the card from this session; the rest come back around.
+        if (rating === 4) {
             // Easy - remove from array completely
             this.cards.splice(this.currentCardIndex, 1);
         } else {

@@ -23,12 +23,20 @@ class CardForm
                 TextInput::make('back')
                     ->required(),
                 TextInput::make('audio'),
-                TextInput::make('interval')
-                    ->required()
+                // FSRS memory state is derived by the scheduler from the review
+                // history, so it is shown for diagnosis but not editable --
+                // hand-editing stability would desync a card from its own log.
+                TextInput::make('stability')
                     ->numeric()
-                    ->default(1),
-                DateTimePicker::make('revised_at'),
-                DateTimePicker::make('last_reviewed'),
+                    ->disabled()
+                    ->helperText('Days until recall falls to 90%. Derived by the scheduler.'),
+                TextInput::make('difficulty')
+                    ->numeric()
+                    ->disabled()
+                    ->helperText('1 is easiest, 10 is hardest.'),
+                DateTimePicker::make('due'),
+                DateTimePicker::make('last_review')
+                    ->disabled(),
             ]);
     }
 }
