@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Constants\DeckLimits;
 use Carbon\Carbon;
 use Database\Factories\DeckFactory;
 use Illuminate\Database\Eloquent\Collection;
@@ -35,11 +36,20 @@ class Deck extends Model
         'user_id',
         'is_public',
         'new_cards_per_day',
-        'max_cards',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_public' => 'boolean',
+            'new_cards_per_day' => 'integer',
+        ];
+    }
 
     /**
      * The owner of the deck (user who created it)
+     *
+     * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo
     {
@@ -48,6 +58,8 @@ class Deck extends Model
 
     /**
      * All cards in this deck
+     *
+     * @return HasMany<Card, $this>
      */
     public function cards(): HasMany
     {
@@ -56,10 +68,15 @@ class Deck extends Model
 
     /**
      * Check if the deck has reached its maximum card limit
+     *
+     * Compares against DeckLimits::USER_DECK_MAX_CARDS. This used to read a
+     * `max_cards` column that no relevant migration ever created, so the value
+     * was always null -- making `count() >= null` evaluate as `count() >= 0`,
+     * i.e. permanently true, which blocked card creation on every deck.
      */
     public function hasReachedCardLimit(): bool
     {
-        return $this->cards()->count() >= $this->max_cards;
+        return $this->cards()->count() >= DeckLimits::USER_DECK_MAX_CARDS;
     }
 
     /**
@@ -67,6 +84,24 @@ class Deck extends Model
      */
     public function getRemainingCardSlots(): int
     {
-        return max(0, $this->max_cards - $this->cards()->count());
+        return max(0, DeckLimits::USER_DECK_MAX_CARDS - $this->cards()->count());
+    }
+
+    /**
+     * Reset spaced-repetition scheduling for every card in this deck.
+     *
+     * Counterpart to StaticDeck::resetLearningProgress(). DeckController::reset()
+     * has always called this method, but it was never implemented -- so
+     * POST /decks/{deck}/reset threw BadMethodCallException (HTTP 500).
+     */
+    public function resetLearningProgress(): void
+    {
+        $this->cards()->update([
+            'interval' => 1,
+            'ease_factor' => 2.5,
+            'repetitions' => 0,
+            'revised_at' => null,
+            'last_reviewed' => null,
+        ]);
     }
 }
