@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Card;
 use App\Models\Deck;
+use App\Services\SpacedRepetitionService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,13 +16,17 @@ class StudyController extends Controller
 {
     use AuthorizesRequests;
 
+    public function __construct(
+        private readonly SpacedRepetitionService $spacedRepetition,
+    ) {}
+
     /**
      * Start a study session for a deck
      */
     public function start(Deck $deck): Response
     {
-        // Temporarily disable authorization for debugging
-        // $this->authorize('view', $deck);
+        $this->authorize('view', $deck);
+
         return response()->view('study.session', [
             'deck' => $deck,
         ]);
@@ -32,8 +37,7 @@ class StudyController extends Controller
      */
     public function getCards(Deck $deck): JsonResponse
     {
-        // Temporarily disable authorization for debugging
-        // $this->authorize('view', $deck);
+        $this->authorize('view', $deck);
 
         try {
             // Get new cards per day from deck settings
@@ -84,66 +88,16 @@ class StudyController extends Controller
      */
     public function updateCard(Request $request, Card $card): JsonResponse
     {
-        // Temporarily disable authorization for debugging
-        // $this->authorize('view', $card->deck);
+        // 'update' rather than 'view': reviewing mutates the card's schedule, and
+        // DeckPolicy::view() also passes for public decks owned by someone else.
+        $this->authorize('update', $card->deck);
 
         $request->validate([
             'quality' => 'required|integer|min:0|max:3', // 0=Again, 1=Hard, 2=Good, 3=Easy
         ]);
 
         try {
-            $quality = $request->input('quality');
-            $now = now();
-
-            // Spaced repetition algorithm
-            if ($quality === 0) {
-                // Again - reset to 1 day
-                $card->update([
-                    'interval' => 1,
-                    'repetitions' => 0,
-                    'ease_factor' => max(1.3, $card->ease_factor - 0.2),
-                    'revised_at' => $now->addDay(),
-                    'last_reviewed' => $now,
-                ]);
-            } else {
-                // Hard, Good, Easy
-                $newInterval = $card->interval;
-                $newEaseFactor = $card->ease_factor;
-                $newRepetitions = $card->repetitions + 1;
-
-                if ($quality === 1) {
-                    // Hard
-                    $newInterval = max(1, $card->interval * 1.2);
-                    $newEaseFactor = max(1.3, $card->ease_factor - 0.15);
-                } elseif ($quality === 2) {
-                    // Good
-                    if ($card->repetitions === 0) {
-                        $newInterval = 1;
-                    } elseif ($card->repetitions === 1) {
-                        $newInterval = 6;
-                    } else {
-                        $newInterval = $card->interval * $card->ease_factor;
-                    }
-                } elseif ($quality === 3) {
-                    // Easy
-                    if ($card->repetitions === 0) {
-                        $newInterval = 4;
-                    } elseif ($card->repetitions === 1) {
-                        $newInterval = 10;
-                    } else {
-                        $newInterval = $card->interval * $card->ease_factor;
-                    }
-                    $newEaseFactor = $card->ease_factor + 0.15;
-                }
-
-                $card->update([
-                    'interval' => (int) $newInterval,
-                    'repetitions' => $newRepetitions,
-                    'ease_factor' => $newEaseFactor,
-                    'revised_at' => $now->addDays((int) $newInterval),
-                    'last_reviewed' => $now,
-                ]);
-            }
+            $this->spacedRepetition->review($card, (int) $request->input('quality'));
 
             return response()->json([
                 'success' => true,
@@ -170,68 +124,33 @@ class StudyController extends Controller
             'updates.*.quality' => 'required|integer|min:0|max:3',
         ]);
 
+        $updates = $request->input('updates');
+
+        // Authorize every card up front, outside the try/catch below.
+        // AuthorizationException extends Exception, so authorizing inside the try
+        // would swallow a 403 and report it as a generic 500 instead.
+        //
+        // Validating only `exists:cards,id` proves the card exists, not that the
+        // caller owns it -- without this check any authenticated user could
+        // rewrite another user's scheduling by guessing card ids.
+        $cards = Card::with('deck')
+            ->findMany(array_column($updates, 'card_id'))
+            ->keyBy('id');
+
+        foreach ($cards as $card) {
+            $this->authorize('update', $card->deck);
+        }
+
         try {
-            $updates = $request->input('updates');
-            $now = now();
             $updatedCards = [];
 
             foreach ($updates as $update) {
-                $card = Card::find($update['card_id']);
+                $card = $cards->get($update['card_id']);
                 if (! $card) {
                     continue;
                 }
 
-                $quality = $update['quality'];
-
-                // Spaced repetition algorithm
-                if ($quality === 0) {
-                    // Again - reset to 1 day
-                    $card->update([
-                        'interval' => 1,
-                        'repetitions' => 0,
-                        'ease_factor' => max(1.3, $card->ease_factor - 0.2),
-                        'revised_at' => $now->addDay(),
-                        'last_reviewed' => $now,
-                    ]);
-                } else {
-                    // Hard, Good, Easy
-                    $newInterval = $card->interval;
-                    $newEaseFactor = $card->ease_factor;
-                    $newRepetitions = $card->repetitions + 1;
-
-                    if ($quality === 1) {
-                        // Hard
-                        $newInterval = max(1, $card->interval * 1.2);
-                        $newEaseFactor = max(1.3, $card->ease_factor - 0.15);
-                    } elseif ($quality === 2) {
-                        // Good
-                        if ($card->repetitions === 0) {
-                            $newInterval = 1;
-                        } elseif ($card->repetitions === 1) {
-                            $newInterval = 6;
-                        } else {
-                            $newInterval = $card->interval * $card->ease_factor;
-                        }
-                    } elseif ($quality === 3) {
-                        // Easy
-                        if ($card->repetitions === 0) {
-                            $newInterval = 4;
-                        } elseif ($card->repetitions === 1) {
-                            $newInterval = 10;
-                        } else {
-                            $newInterval = $card->interval * $card->ease_factor;
-                        }
-                        $newEaseFactor = $card->ease_factor + 0.15;
-                    }
-
-                    $card->update([
-                        'interval' => (int) $newInterval,
-                        'repetitions' => $newRepetitions,
-                        'ease_factor' => $newEaseFactor,
-                        'revised_at' => $now->addDays((int) $newInterval),
-                        'last_reviewed' => $now,
-                    ]);
-                }
+                $this->spacedRepetition->review($card, (int) $update['quality']);
 
                 $updatedCards[] = [
                     'id' => $card->id,
