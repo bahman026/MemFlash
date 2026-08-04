@@ -66,8 +66,19 @@ final class Scheduler
             $elapsedDays = 0;
             $retrievability = 1.0;
         } else {
+            // isNew() only rules out NULL stability/difficulty; it does not rule out
+            // an out-of-range persisted value (e.g. 0.0). Every formula that WRITES
+            // stability floors it at S_MIN, but nothing previously floored it on
+            // READ, so a stray 0.0 -- from a hand-edited row, a bad import, or a
+            // future bug -- reached `stability ** (-w9)` and produced NAN, which
+            // then propagates forever since every later review starts from it.
+            // Confirmed: stability=0.0 (not null) yielded NAN with a "power of base
+            // 0 and negative exponent" deprecation notice.
+            $priorStability = max(Parameters::S_MIN, (float) $card->stability);
+            $priorDifficulty = min(Parameters::D_MAX, max(Parameters::D_MIN, (float) $card->difficulty));
+
             $elapsedDays = $this->dayDifference($card->lastReview, $now);
-            $retrievability = $this->fsrs->retrievability((float) $elapsedDays, (float) $card->stability);
+            $retrievability = $this->fsrs->retrievability((float) $elapsedDays, $priorStability);
         }
 
         // --- 2. update memory state ---
@@ -75,14 +86,14 @@ final class Scheduler
             $stability = $this->fsrs->initialStability($rating);
             $difficulty = $this->fsrs->initialDifficulty($rating);
         } else {
-            $difficulty = $this->fsrs->nextDifficulty((float) $card->difficulty, $rating);
+            $difficulty = $this->fsrs->nextDifficulty($priorDifficulty, $rating);
 
             if ($elapsedDays < 1) {
-                $stability = $this->fsrs->stabilitySameDay((float) $card->stability, $rating);
+                $stability = $this->fsrs->stabilitySameDay($priorStability, $rating);
             } elseif ($rating->isLapse()) {
-                $stability = $this->fsrs->stabilityAfterLapse($difficulty, (float) $card->stability, $retrievability);
+                $stability = $this->fsrs->stabilityAfterLapse($difficulty, $priorStability, $retrievability);
             } else {
-                $stability = $this->fsrs->stabilityAfterRecall($difficulty, (float) $card->stability, $retrievability, $rating);
+                $stability = $this->fsrs->stabilityAfterRecall($difficulty, $priorStability, $retrievability, $rating);
             }
         }
 

@@ -103,6 +103,15 @@ trait HasFsrsMemory
 
     /**
      * Probability of recalling this card right now, always derived.
+     *
+     * APPROXIMATE: this trait has no route to the card's deck, so it always uses
+     * the FSRS-6 default parameters and a plain day count, rather than the deck's
+     * own (possibly optimized) parameters and the user's rollover hour and
+     * timezone. Confirmed to diverge from the correct value once a deck has been
+     * optimized, and near a rollover boundary. Suitable for a context with no
+     * deck/user in hand (ad hoc inspection, Filament); every live API response
+     * uses App\Services\ReviewService::retrievabilityOf() instead, which resolves
+     * the actual scheduler for the card's deck and user.
      */
     public function retrievability(?\DateTimeInterface $at = null): float
     {

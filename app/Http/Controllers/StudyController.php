@@ -69,8 +69,11 @@ class StudyController extends Controller
                 'state' => $card->state->value,
                 'stability' => $card->stability,
                 'difficulty' => $card->difficulty,
-                // Derived on read, never stored.
-                'retrievability' => $card->retrievability(),
+                // Derived on read, never stored. Goes through the deck's own
+                // scheduler so an optimized deck's parameters are actually used --
+                // Card::retrievability() has no deck context and always falls back
+                // to the FSRS-6 defaults.
+                'retrievability' => $this->reviews->retrievabilityOf($user, $card),
                 'due' => $card->due,
                 'last_review' => $card->last_review,
                 'reps' => $card->reps,

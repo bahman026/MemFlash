@@ -136,6 +136,7 @@ class StaticDeckController extends Controller
             $cards = $dueCards->map(function (StaticCard $card) use ($user, $states): array {
                 $state = $states->get($card->id)
                     ?? new UserStaticCardState(['user_id' => $user->id, 'static_card_id' => $card->id]);
+                $snapshot = $state->toSnapshot();
 
                 return [
                     'id' => $card->id,
@@ -146,12 +147,17 @@ class StaticDeckController extends Controller
                     'state' => $state->state->value,
                     'stability' => $state->stability,
                     'difficulty' => $state->difficulty,
-                    'retrievability' => $state->retrievability(),
+                    // Goes through the deck's own scheduler (parameters, rollover
+                    // hour, timezone) rather than the record's own defaults-only
+                    // retrievability(). The snapshot is passed explicitly so this
+                    // stays read-only for a card the user has never seen, same as
+                    // the intervals preview below.
+                    'retrievability' => $this->reviews->retrievabilityOf($user, $card, snapshot: $snapshot),
                     'due' => $state->due,
                     'last_review' => $state->last_review,
                     'reps' => $state->reps,
                     'lapses' => $state->lapses,
-                    'intervals' => $this->reviews->previewIntervals($user, $card, snapshot: $state->toSnapshot()),
+                    'intervals' => $this->reviews->previewIntervals($user, $card, snapshot: $snapshot),
                 ];
             });
 

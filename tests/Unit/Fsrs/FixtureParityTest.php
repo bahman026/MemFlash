@@ -124,3 +124,40 @@ it('matches the fixture interval multipliers', function (): void {
             ->toBe($case['interval'], "DR={$case['desired_retention']}");
     }
 });
+
+it('matches the fixture for corrupted memory state', function (): void {
+    foreach ($this->vectors['corrupted_memory_state']['cases'] as $case) {
+        $scheduler = new App\Fsrs\Scheduler(
+            new App\Fsrs\SchedulerConfig(rolloverHour: 4, timezone: 'UTC', enableFuzzing: false),
+            $this->fsrs,
+        );
+
+        $card = new App\Fsrs\CardSnapshot(
+            state: App\Fsrs\CardState::Review,
+            stability: $case['stability'],
+            difficulty: $case['difficulty'],
+            lastReview: new DateTimeImmutable('2026-01-01T10:00:00Z'),
+            reps: 5,
+        );
+
+        $out = $scheduler->review($card, Rating::Good, new DateTimeImmutable('2026-01-11T10:00:00Z'));
+
+        expect($out->stability)->not->toBeNan()
+            ->and(round($out->stability, 4))->toBe(round($case['expected_stability'], 4), $case['description'])
+            ->and(round($out->difficulty, 4))->toBe(round($case['expected_difficulty'], 4), $case['description']);
+    }
+});
+
+it('matches the fixture day-difference cases across timezones and DST', function (): void {
+    foreach ($this->vectors['day_difference']['cases'] as $case) {
+        $scheduler = new App\Fsrs\Scheduler(
+            new App\Fsrs\SchedulerConfig(rolloverHour: 4, timezone: $case['timezone']),
+            $this->fsrs,
+        );
+
+        $from = new DateTimeImmutable($case['from']);
+        $to = new DateTimeImmutable($case['to']);
+
+        expect($scheduler->dayDifference($from, $to))->toBe($case['days'], $case['description']);
+    }
+});

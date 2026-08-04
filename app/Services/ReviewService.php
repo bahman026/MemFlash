@@ -129,6 +129,47 @@ class ReviewService
     }
 
     /**
+     * Current probability of recall, using the deck's own parameters and the
+     * user's own rollover hour and timezone.
+     *
+     * HasFsrsMemory::retrievability() also computes this, but from the record
+     * alone: it has no route to the deck's config, so it always uses the FSRS-6
+     * defaults, and its day count is a plain Carbon diffInDays rather than a
+     * rollover-aware one. Confirmed to diverge in both dimensions -- 0.809 vs
+     * 0.777 for a deck with an optimized decay parameter at the same elapsed time
+     * and stability, and a fractional "0.125 days" from Carbon where the correct,
+     * rollover-aware count is 0. Prefer this method wherever a deck/user context
+     * is available, which is every live call site.
+     */
+    public function retrievabilityOf(
+        User $user,
+        Card | StaticCard $card,
+        ?DateTimeImmutable $now = null,
+        ?CardSnapshot $snapshot = null,
+    ): float {
+        if ($card instanceof Card) {
+            $card->loadMissing('deck');
+            $scheduler = $this->schedulers->forDeck($card->deck, $user);
+            $snapshot ??= $card->toSnapshot();
+        } else {
+            $card->loadMissing('staticDeck');
+            $scheduler = $this->schedulers->forStaticDeck($card->staticDeck, $user);
+            // Same reasoning as previewIntervals(): a GET must not write, so only
+            // fall back to stateFor() (which creates a row) when the caller has not
+            // already supplied one.
+            $snapshot ??= $card->stateFor($user)->toSnapshot();
+        }
+
+        if ($snapshot->isNew()) {
+            return 1.0;
+        }
+
+        $elapsedDays = $scheduler->dayDifference($snapshot->lastReview, $now ?? new DateTimeImmutable);
+
+        return $scheduler->fsrs()->retrievability((float) $elapsedDays, (float) $snapshot->stability);
+    }
+
+    /**
      * Return a card to the New state while keeping its review history.
      */
     public function forget(User $user, Card | StaticCard $card): void

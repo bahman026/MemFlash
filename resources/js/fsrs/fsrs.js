@@ -24,7 +24,6 @@ export const S_MIN = 0.001;
 export const D_MIN = 1.0;
 export const D_MAX = 10.0;
 const MIN_EASE_FACTOR = 1.3;
-const DEFAULT_EASE_FACTOR = 2.5;
 const SECONDS_PER_DAY = 86400;
 
 export const Rating = { Again: 1, Hard: 2, Good: 3, Easy: 4 };
@@ -159,7 +158,33 @@ export const defaultConfig = () => ({
     maximumInterval: 36500,
     enableFuzzing: true,
     rolloverHour: 4,
+    // Mirrors SchedulerConfig::$timezone. A prior version of this file computed day
+    // boundaries in UTC unconditionally and never accepted a timezone, so a review
+    // logged offline by a non-UTC user could cross the rollover boundary in PHP but
+    // not in JS (or vice versa) for the exact same instant -- silently picking F8
+    // (same-day) on one side and F6/F7 (day-scale) on the other. Confirmed with
+    // Asia/Tehran: the same instant pair gave dayDifference 1 in PHP, 0 here.
+    timezone: 'UTC',
 });
+
+/**
+ * The calendar date (year, month, day) that `date` falls on inside `timeZone`.
+ *
+ * Uses Intl.DateTimeFormat rather than hand-rolled offset tables, so it follows
+ * the same IANA tz database PHP's DateTimeZone uses, DST included.
+ */
+function localCalendarDate(date, timeZone) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(date);
+
+    const get = (type) => Number(parts.find((p) => p.type === type).value);
+
+    return { year: get('year'), month: get('month'), day: get('day') };
+}
 
 export class Scheduler {
     /**
@@ -173,17 +198,25 @@ export class Scheduler {
     }
 
     /**
-     * Whole days between two instants, counted in rollover boundaries crossed.
+     * Whole days between two instants, counted in rollover boundaries crossed, in
+     * the configured timezone.
      *
      * Mirrors Scheduler::dayDifference. A review at 2am belongs to the previous
      * day when rollover is 4am, and this decides whether F8 runs — so a naive
      * 24-hour difference would change scheduling.
+     *
+     * Confirmed empirically against the PHP side (tinker, spanning the 2026 US
+     * spring-forward transition) that this reduces to a pure calendar-date
+     * difference: DST does not perturb the day count. So shifting by the rollover
+     * as a real duration and then comparing local Y-M-D via Date.UTC — which does
+     * no DST math of its own — matches PHP's DateTime::diff()->days exactly.
      */
     dayDifference(from, to) {
         const shift = this.config.rolloverHour * 3600 * 1000;
         const startOfDay = (d) => {
             const shifted = new Date(d.getTime() - shift);
-            return Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate());
+            const { year, month, day } = localCalendarDate(shifted, this.config.timezone);
+            return Date.UTC(year, month - 1, day);
         };
 
         return Math.round((startOfDay(to) - startOfDay(from)) / (SECONDS_PER_DAY * 1000));
@@ -205,18 +238,40 @@ export class Scheduler {
      */
     review(card, rating, now = new Date()) {
         const stateBefore = card.state ?? CardState.New;
+        // Mirrors CardSnapshot::isNew(). A prior version of this file did not check
+        // difficulty, so a card with stability set but difficulty null or undefined
+        // (a partially written IndexedDB record, for instance) was treated as an
+        // established review card instead of being re-derived from the rating --
+        // confirmed to produce a different stability AND difficulty than PHP for
+        // the same input (S 41.21 vs 2.31, D 2.50 vs 2.12 on one test case).
         const isNew =
             stateBefore === CardState.New ||
             card.stability === null ||
             card.stability === undefined ||
+            card.difficulty === null ||
+            card.difficulty === undefined ||
             !card.lastReview;
 
         let elapsedDays = 0;
         let retrievability = 1.0;
+        let priorStability;
+        let priorDifficulty;
 
         if (!isNew) {
+            // isNew only rules out null/undefined; it does not rule out an
+            // out-of-range persisted value. Mirrors Scheduler::review() in PHP: a
+            // stray stability of exactly 0 reached `stability ** -w9` there and
+            // produced NaN, which then propagates forever since every later review
+            // starts from it. A previous version of this file "fixed" the same
+            // input by falling back to DEFAULT_EASE_FACTOR (2.5) -- semantically
+            // wrong regardless, since 2.5 is an ease-factor-scale constant, not a
+            // stability-in-days value -- so the two sides disagreed on top of both
+            // being wrong. Floor/clamp instead, exactly like the PHP side now does.
+            priorStability = Math.max(S_MIN, Number(card.stability));
+            priorDifficulty = Math.min(D_MAX, Math.max(D_MIN, Number(card.difficulty)));
+
             elapsedDays = this.dayDifference(new Date(card.lastReview), now);
-            retrievability = this.fsrs.retrievability(elapsedDays, Number(card.stability));
+            retrievability = this.fsrs.retrievability(elapsedDays, priorStability);
         }
 
         let stability;
@@ -226,10 +281,8 @@ export class Scheduler {
             stability = this.fsrs.initialStability(rating);
             difficulty = this.fsrs.initialDifficulty(rating);
         } else {
-            // Guards mirror the PHP: a null interval or zero ease factor would
-            // otherwise collapse every future interval to zero.
-            const currentStability = Number(card.stability) || DEFAULT_EASE_FACTOR;
-            difficulty = this.fsrs.nextDifficulty(Number(card.difficulty) || DEFAULT_EASE_FACTOR, rating);
+            const currentStability = priorStability;
+            difficulty = this.fsrs.nextDifficulty(priorDifficulty, rating);
 
             if (elapsedDays < 1) {
                 stability = this.fsrs.stabilitySameDay(currentStability, rating);

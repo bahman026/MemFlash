@@ -280,3 +280,77 @@ it('uses the deck preset rather than global defaults', function (): void {
     // At 0.97 desired retention the interval is ~0.223 x S, far shorter than at 0.90.
     expect($intervals[Rating::Good->value]['days'])->toBeLessThan(100);
 });
+
+it('computes retrievability using the deck own parameters, not the FSRS-6 defaults', function (): void {
+    $deck = Deck::factory()->for($this->user)->create();
+    $custom = \App\Fsrs\Parameters::DEFAULTS;
+    $custom[20] = 0.35; // a very different decay from the default 0.1542
+    $deck->configOrDefault()->update(['parameters' => $custom]);
+
+    $card = Card::factory()->for($deck)->create([
+        'state' => CardState::Review,
+        'stability' => 10.0,
+        'difficulty' => 5.0,
+        'last_review' => now()->subDays(30),
+        'reps' => 5,
+    ]);
+
+    $correct = $this->reviews->retrievabilityOf($this->user, $card);
+    $wrong = $card->retrievability(); // the deck-blind approximation, for contrast
+
+    // Confirmed by direct computation: default weights give ~0.809, the deck's
+    // optimized weights give ~0.777 for this elapsed time and stability.
+    expect(round($correct, 3))->toBe(0.777)
+        ->and(round($wrong, 3))->toBe(0.809)
+        ->and($correct)->not->toEqual($wrong);
+});
+
+it('computes retrievability using rollover-aware elapsed days, not a naive diff', function (): void {
+    $this->user->update(['rollover_hour' => 4, 'timezone' => 'UTC']);
+    $deck = Deck::factory()->for($this->user)->create();
+
+    // last_review at 23:00, "now" at 02:00 the next day: a naive day diff already
+    // sees a fractional day elapsed; the 4am rollover says this is still the same
+    // day, so retrievability should not have decayed from 1.0 yet.
+    $card = Card::factory()->for($deck)->create([
+        'state' => CardState::Review,
+        'stability' => 10.0,
+        'difficulty' => 5.0,
+        'last_review' => now()->setTime(23, 0),
+        'reps' => 5,
+    ]);
+
+    $at = now()->addDay()->setTime(2, 0)->toDateTimeImmutable();
+
+    expect($this->reviews->retrievabilityOf($this->user, $card, now: $at))->toBe(1.0);
+});
+
+it('stays read-only when the caller supplies its own snapshot for an unseen card', function (): void {
+    // Mirrors how StaticDeckController::getCards() calls this: for a card with no
+    // saved state, it builds an unsaved UserStaticCardState instance itself rather
+    // than letting stateFor() firstOrCreate one, so rendering a queue (a GET)
+    // cannot write. Passing that same unsaved instance's snapshot through here
+    // must not write either.
+    $deck = StaticDeck::factory()->create();
+    $card = StaticCard::factory()->for($deck, 'staticDeck')->create();
+    $unsaved = new UserStaticCardState(['user_id' => $this->user->id, 'static_card_id' => $card->id]);
+
+    $value = $this->reviews->retrievabilityOf($this->user, $card, snapshot: $unsaved->toSnapshot());
+
+    expect($value)->toBe(1.0)
+        ->and(UserStaticCardState::count())->toBe(0);
+});
+
+it('creates state on demand when no snapshot is supplied, like previewIntervals does', function (): void {
+    // Documents the actual contract: calling without a snapshot is a convenience
+    // that resolves (and persists) the card's real state, matching
+    // previewIntervals()'s identical behaviour. Callers that must stay read-only
+    // -- rendering a queue of many cards -- pass a snapshot instead.
+    $deck = StaticDeck::factory()->create();
+    $card = StaticCard::factory()->for($deck, 'staticDeck')->create();
+
+    $this->reviews->retrievabilityOf($this->user, $card);
+
+    expect(UserStaticCardState::where('user_id', $this->user->id)->where('static_card_id', $card->id)->exists())
+        ->toBeTrue();
+});

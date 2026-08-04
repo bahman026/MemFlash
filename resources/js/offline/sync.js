@@ -95,7 +95,11 @@ async function schedulerFor(type, deckId) {
     const user = (await getMeta('user')) ?? {};
     const config = configs[`${type}:${deckId}`] ?? {};
 
-    return new Scheduler({ ...config, rolloverHour: user.rollover_hour ?? 4 });
+    // Both matter for day-boundary math (Scheduler.dayDifference): rolloverHour
+    // alone is meaningless without knowing which timezone it is 4am IN. Omitting
+    // timezone here used to leave the mirror on its UTC default regardless of the
+    // user's actual setting.
+    return new Scheduler({ ...config, rolloverHour: user.rollover_hour ?? 4, timezone: user.timezone ?? 'UTC' });
 }
 
 /** Cards due now for a deck, in queue order, capped like the server caps it. */

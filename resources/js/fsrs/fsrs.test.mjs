@@ -290,6 +290,31 @@ test('intervals below 2.5 days are never fuzzed', () => {
     assert.equal(out.scheduledDays, 2);
 });
 
+test('handles corrupted memory state the same way PHP does', () => {
+    for (const c of vectors.corrupted_memory_state.cases) {
+        const card = {
+            state: CardState.Review,
+            stability: c.stability,
+            difficulty: c.difficulty,
+            lastReview: at('2026-01-01T10:00:00Z'),
+            reps: 5,
+        };
+
+        const out = scheduler().review(card, Rating.Good, at('2026-01-11T10:00:00Z'));
+
+        assert.ok(!Number.isNaN(out.stability), c.description);
+        assert.equal(round(out.stability, 4), round(c.expected_stability, 4), c.description);
+        assert.equal(round(out.difficulty, 4), round(c.expected_difficulty, 4), c.description);
+    }
+});
+
+test('day-difference matches the fixture across timezones and DST', () => {
+    for (const c of vectors.day_difference.cases) {
+        const s = scheduler({ timezone: c.timezone });
+        assert.equal(s.dayDifference(at(c.from), at(c.to)), c.days, c.description);
+    }
+});
+
 test('preview returns all four ratings without mutating the card', () => {
     const card = {
         state: CardState.Review,

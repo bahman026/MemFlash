@@ -174,6 +174,47 @@ the fuzz formula can exceed its own upper bound by a day as the random draw
 approaches 1, and a **same-day** Hard may reduce stability even though Hard never
 can after a day or more.
 
+### Bugs found by auditing PHP against JS, fixed 2026-08-04
+
+Three confirmed, provable divergences — not hypothetical, each reproduced with
+concrete inputs before being fixed:
+
+1. **Day-boundary math ignored timezone entirely.** The JS mirror computed
+   `dayDifference` in UTC and never accepted a timezone; `sync.js` didn't even pass
+   one. For a user in `Asia/Tehran`, the same instant pair gave `1` in PHP and `0`
+   in JS — deciding F8 vs F6/F7 differently for the same review. Fixed with
+   `Intl.DateTimeFormat`-based local-date extraction, confirmed against PHP
+   including a run spanning a US DST transition (14 days either way — DST does not
+   perturb the count, in either implementation).
+2. **`isNew()` only checked `stability` in JS, not `difficulty`.** A card with
+   stability set but difficulty null/undefined was treated as an established review
+   card in JS (masked with a fallback difficulty) but correctly re-derived as brand
+   new in PHP — S=41.21/D=2.50 vs S=2.31/D=2.12 for the same input.
+3. **A persisted `stability` of exactly `0.0` (not null) produced `NaN` in PHP**
+   via `pow(0, negative)`, which then propagates forever since every later review
+   for that card starts from it. JS "fixed" the same input by substituting
+   `DEFAULT_EASE_FACTOR` (2.5) — semantically wrong regardless, since that is an
+   ease-factor-scale constant, not a stability value. Both sides now floor/clamp a
+   persisted value on read (`max(S_MIN, ...)` / `clamp(D_MIN, D_MAX, ...)`) rather
+   than trusting it, in `Scheduler::review()` and its JS mirror.
+
+All three are pinned in `tests/fixtures/fsrs-vectors.json`
+(`day_difference`, `corrupted_memory_state`) so they cannot silently regress —
+verified by reintroducing each bug one at a time and confirming the fixture tests
+fail, then restoring the fix.
+
+Also found live in the API (not the scheduler itself):
+`Card::retrievability()` / `UserStaticCardState::retrievability()`
+(`HasFsrsMemory` trait) have no route to the card's deck, so they always compute
+using the FSRS-6 **defaults** and a plain `diffInDays`, not the deck's own
+(possibly optimized) parameters or the user's rollover hour. Confirmed to diverge
+materially once a deck has non-default parameters (0.809 vs 0.777 for the same
+elapsed time and stability) and near a rollover boundary (a fractional
+"0.125 days" from Carbon vs the correct 0). `App\Services\ReviewService::retrievabilityOf()`
+resolves the actual per-deck scheduler and is what both `StudyController` and
+`StaticDeckController` use now; the trait method remains only as a documented
+approximation for contexts with no deck/user in hand.
+
 ### Two card hierarchies, both with per-user memory
 
 ```
