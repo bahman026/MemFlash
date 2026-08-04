@@ -8,12 +8,27 @@ use App\Models\StaticCard;
 use App\Models\StaticDeck;
 use App\Models\UserStaticDeckProgress;
 use App\Models\UserStaticDeckSetting;
+use App\Services\SpacedRepetitionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class StaticDeckController extends Controller
 {
+    public function __construct(
+        private readonly SpacedRepetitionService $spacedRepetition,
+    ) {}
+
+    /**
+     * Resolve how many cards this user studies per day for a deck.
+     */
+    private function cardsPerDayFor(StaticDeck $staticDeck): int
+    {
+        return (int) (UserStaticDeckSetting::where('user_id', auth()->id())
+            ->where('static_deck_id', $staticDeck->id)
+            ->value('cards_per_day') ?? 10);
+    }
+
     /**
      * Reset learning progress for a static deck
      */
@@ -55,15 +70,9 @@ class StaticDeckController extends Controller
      */
     public function study(StaticDeck $staticDeck)
     {
-        $user = auth()->user();
         $staticDeck->load('cards');
 
-        // Get user's cards per day setting for this deck
-        $userSetting = UserStaticDeckSetting::where('user_id', $user->id)
-            ->where('static_deck_id', $staticDeck->id)
-            ->first();
-
-        $cardsPerDay = $userSetting ? $userSetting->cards_per_day : 10;
+        $cardsPerDay = $this->cardsPerDayFor($staticDeck);
 
         // Get cards that are due for review
         $dueCards = $staticDeck->cards()
@@ -128,6 +137,11 @@ class StaticDeckController extends Controller
     public function getCards(StaticDeck $staticDeck): JsonResponse
     {
         try {
+            // Same daily cap as study(). Without the limit this endpoint handed back
+            // every due card in the deck, so the cards-per-day setting was enforced
+            // on the server-rendered page but silently bypassed via the JSON path.
+            $cardsPerDay = $this->cardsPerDayFor($staticDeck);
+
             // Get cards that are due for review
             $dueCards = $staticDeck->cards()
                 ->where(function ($query) {
@@ -136,6 +150,7 @@ class StaticDeckController extends Controller
                 })
                 ->orderByRaw('CASE WHEN revised_at IS NULL THEN 0 ELSE 1 END')
                 ->orderBy('interval')
+                ->limit($cardsPerDay)
                 ->get();
 
             return response()->json([
@@ -143,6 +158,7 @@ class StaticDeckController extends Controller
                 'deck' => [
                     'id' => $staticDeck->id,
                     'name' => $staticDeck->name,
+                    'cards_per_day' => $cardsPerDay,
                     'cards_loaded' => $dueCards->count(),
                 ],
             ]);
@@ -162,57 +178,8 @@ class StaticDeckController extends Controller
 
         try {
             $user = auth()->user();
-            $quality = $request->quality;
 
-            // Simple spaced repetition algorithm
-            if ($quality === 0) {
-                // Again - reset to 1 day
-                $card->update([
-                    'interval' => 1,
-                    'repetitions' => 0,
-                    'ease_factor' => max(1.3, $card->ease_factor - 0.2),
-                    'revised_at' => now()->addDay(),
-                    'last_reviewed' => now(),
-                ]);
-            } else {
-                // Hard, Good, Easy
-                $newInterval = $card->interval;
-                $newEaseFactor = $card->ease_factor;
-                $newRepetitions = $card->repetitions + 1;
-
-                if ($quality === 1) {
-                    // Hard
-                    $newInterval = max(1, $card->interval * 1.2);
-                    $newEaseFactor = max(1.3, $card->ease_factor - 0.15);
-                } elseif ($quality === 2) {
-                    // Good
-                    if ($card->repetitions === 0) {
-                        $newInterval = 1;
-                    } elseif ($card->repetitions === 1) {
-                        $newInterval = 6;
-                    } else {
-                        $newInterval = $card->interval * $card->ease_factor;
-                    }
-                } elseif ($quality === 3) {
-                    // Easy
-                    if ($card->repetitions === 0) {
-                        $newInterval = 4;
-                    } elseif ($card->repetitions === 1) {
-                        $newInterval = 10;
-                    } else {
-                        $newInterval = $card->interval * $card->ease_factor;
-                    }
-                    $newEaseFactor = $card->ease_factor + 0.15;
-                }
-
-                $card->update([
-                    'interval' => (int) $newInterval,
-                    'repetitions' => $newRepetitions,
-                    'ease_factor' => $newEaseFactor,
-                    'revised_at' => now()->addDays((int) $newInterval),
-                    'last_reviewed' => now(),
-                ]);
-            }
+            $this->spacedRepetition->review($card, (int) $request->quality);
 
             // Update user progress
             $userProgress = UserStaticDeckProgress::firstOrCreate(
@@ -261,60 +228,11 @@ class StaticDeckController extends Controller
                 $card = StaticCard::find($update['card_id']);
                 if ($card) {
                     $staticDeckId = $card->static_deck_id;
-                    $quality = $update['quality'];
 
                     // Track which cards were studied
                     $studiedCardIds[] = $card->id;
 
-                    // Simple spaced repetition algorithm
-                    if ($quality === 0) {
-                        // Again - reset to 1 day
-                        $card->update([
-                            'interval' => 1,
-                            'repetitions' => 0,
-                            'ease_factor' => max(1.3, $card->ease_factor - 0.2),
-                            'revised_at' => now()->addDay(),
-                            'last_reviewed' => now(),
-                        ]);
-                    } else {
-                        // Hard, Good, Easy
-                        $newInterval = $card->interval;
-                        $newEaseFactor = $card->ease_factor;
-                        $newRepetitions = $card->repetitions + 1;
-
-                        if ($quality === 1) {
-                            // Hard
-                            $newInterval = max(1, $card->interval * 1.2);
-                            $newEaseFactor = max(1.3, $card->ease_factor - 0.15);
-                        } elseif ($quality === 2) {
-                            // Good
-                            if ($card->repetitions === 0) {
-                                $newInterval = 1;
-                            } elseif ($card->repetitions === 1) {
-                                $newInterval = 6;
-                            } else {
-                                $newInterval = $card->interval * $card->ease_factor;
-                            }
-                        } elseif ($quality === 3) {
-                            // Easy
-                            if ($card->repetitions === 0) {
-                                $newInterval = 4;
-                            } elseif ($card->repetitions === 1) {
-                                $newInterval = 10;
-                            } else {
-                                $newInterval = $card->interval * $card->ease_factor;
-                            }
-                            $newEaseFactor = $card->ease_factor + 0.15;
-                        }
-
-                        $card->update([
-                            'interval' => (int) $newInterval,
-                            'repetitions' => $newRepetitions,
-                            'ease_factor' => $newEaseFactor,
-                            'revised_at' => now()->addDays((int) $newInterval),
-                            'last_reviewed' => now(),
-                        ]);
-                    }
+                    $this->spacedRepetition->review($card, (int) $update['quality']);
                 }
             }
 
