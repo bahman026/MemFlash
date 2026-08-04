@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\SyncController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
@@ -79,4 +80,11 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::get('/api/static-study/{staticDeck}/cards', [StaticDeckController::class, 'getCards'])->name('static-study.cards');
     Route::post('/api/static-study/cards/{card}', [StaticDeckController::class, 'updateCard'])->name('static-study.update-card');
     Route::post('/api/static-study/batch-update', [StaticDeckController::class, 'batchUpdate'])->name('static-study.batch-update');
+
+    // Offline support. bootstrap downloads the full working set before going
+    // offline; sync replays the queued ratings through the server scheduler, which
+    // is authoritative over whatever the client computed locally.
+    Route::get('/api/sync/bootstrap', [SyncController::class, 'bootstrap'])->name('sync.bootstrap');
+    Route::post('/api/sync', [SyncController::class, 'sync'])->name('sync.push');
+    Route::get('/api/sync/status', [SyncController::class, 'status'])->name('sync.status');
 });

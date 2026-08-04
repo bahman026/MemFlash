@@ -45,6 +45,23 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    /**
+     * Model-level defaults, not just database defaults.
+     *
+     * A user created without an explicit level came back with `level` null in
+     * memory, because the column default only applies inside the database. That
+     * null then reached StaticDeck::scopeByLevel(), which is typed, and any code
+     * path touching recommended decks died with a TypeError.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'level' => UserLevelEnum::STARTER->value,
+        'status' => 1,
+        'timezone' => 'UTC',
+        'rollover_hour' => 4,
+    ];
+
     protected $fillable = [
         'name',
         'email',
@@ -133,8 +150,10 @@ class User extends Authenticatable
      */
     public function getRecommendedStaticDecks()
     {
+        // Defensive fallback: scopeByLevel is typed, so a user whose level was
+        // never set would otherwise crash rather than simply see starter decks.
         return StaticDeck::active()
-            ->byLevel($this->level)
+            ->byLevel($this->level ?? UserLevelEnum::STARTER)
             ->ordered()
             ->get();
     }

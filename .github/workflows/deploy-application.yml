@@ -66,6 +66,14 @@ jobs:
         run: |
           ./vendor/bin/pest
 
+      # The offline FSRS mirror and the PHP scheduler are checked against the same
+      # fixture. If they diverge the user is shown one interval and given another,
+      # so both suites have to run.
+      - name: Run JavaScript Tests
+        working-directory: ./
+        run: |
+          npm run test:js
+
       - name: Run PHPStan Analysis
         working-directory: ./
         run: |

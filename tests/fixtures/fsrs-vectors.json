@@ -1,0 +1,75 @@
+{
+  "_comment": "Reference vectors from the FSRS-6 build specification, Part 4. Read by BOTH the PHP test suite and the JavaScript test suite so the offline mirror cannot drift from the server implementation. Values come from the specification document, not from either implementation.",
+  "parameters": [
+    0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194,
+    0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629,
+    1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542
+  ],
+  "desired_retention": 0.9,
+  "maximum_interval": 36500,
+  "constants": {
+    "decay": 0.1542,
+    "factor": 0.9803464944,
+    "factor_tolerance": 1e-9
+  },
+  "forgetting_curve": [
+    { "elapsed_days": 0, "stability": 10, "retrievability": 1.0 },
+    { "elapsed_days": 1, "stability": 10, "retrievability": 0.9857 },
+    { "elapsed_days": 2, "stability": 10, "retrievability": 0.9728 },
+    { "elapsed_days": 5, "stability": 10, "retrievability": 0.9403 },
+    { "elapsed_days": 10, "stability": 10, "retrievability": 0.9 },
+    { "elapsed_days": 20, "stability": 10, "retrievability": 0.8459 },
+    { "elapsed_days": 50, "stability": 10, "retrievability": 0.7605 },
+    { "elapsed_days": 100, "stability": 10, "retrievability": 0.6928 },
+    { "elapsed_days": 365, "stability": 10, "retrievability": 0.5736 }
+  ],
+  "initial_state": [
+    { "grade": 1, "stability": 0.212, "difficulty": 6.4133, "interval": 1 },
+    { "grade": 2, "stability": 1.2931, "difficulty": 5.1122, "interval": 1 },
+    { "grade": 3, "stability": 2.3065, "difficulty": 2.1181, "interval": 2 },
+    { "grade": 4, "stability": 8.2956, "difficulty": 1.0, "interval": 8 }
+  ],
+  "repeated_good": [
+    { "review": 1, "day": 0, "retrievability_before": 1.0, "stability_after": 2.3065, "difficulty_after": 2.1181, "next_interval": 2 },
+    { "review": 2, "day": 2, "retrievability_before": 0.9095, "stability_after": 10.9654, "difficulty_after": 2.117, "next_interval": 11 },
+    { "review": 3, "day": 13, "retrievability_before": 0.8998, "stability_after": 46.2632, "difficulty_after": 2.1159, "next_interval": 46 },
+    { "review": 4, "day": 59, "retrievability_before": 0.9004, "stability_after": 162.7036, "difficulty_after": 2.1148, "next_interval": 163 },
+    { "review": 5, "day": 222, "retrievability_before": 0.8999, "stability_after": 496.6417, "difficulty_after": 2.1136, "next_interval": 497 },
+    { "review": 6, "day": 719, "retrievability_before": 0.9, "stability_after": 1342.4723, "difficulty_after": 2.1125, "next_interval": 1342 },
+    { "review": 7, "day": 2061, "retrievability_before": 0.9, "stability_after": 3278.5315, "difficulty_after": 2.1114, "next_interval": 3279 }
+  ],
+  "single_review": {
+    "stability_before": 10.0,
+    "difficulty_before": 5.0,
+    "elapsed_days": 10,
+    "retrievability_before": 0.9,
+    "cases": [
+      { "grade": 1, "difficulty_after": 8.3475, "stability_after": 1.3489, "interval": 1 },
+      { "grade": 2, "difficulty_after": 6.6718, "stability_after": 19.5559, "interval": 20 },
+      { "grade": 3, "difficulty_after": 4.996, "stability_after": 32.0414, "interval": 32 },
+      { "grade": 4, "difficulty_after": 3.3202, "stability_after": 62.8033, "interval": 63 }
+    ]
+  },
+  "same_day": {
+    "stability_before": 2.0,
+    "cases": [
+      { "grade": 1, "stability_after": 0.678422 },
+      { "grade": 2, "stability_after": 1.167091 },
+      { "grade": 3, "stability_after": 2.007749 },
+      { "grade": 4, "stability_after": 3.453935 }
+    ]
+  },
+  "interval_multipliers": [
+    { "desired_retention": 0.7, "stability": 100, "interval": 929 },
+    { "desired_retention": 0.8, "stability": 100, "interval": 332 },
+    { "desired_retention": 0.85, "stability": 100, "interval": 191 },
+    { "desired_retention": 0.9, "stability": 100, "interval": 100 },
+    { "desired_retention": 0.95, "stability": 100, "interval": 40 },
+    { "desired_retention": 0.97, "stability": 100, "interval": 22 }
+  ],
+  "fuzz_windows": [
+    { "interval": 32, "elapsed_days": 10, "min": 28, "max": 36 },
+    { "interval": 5, "elapsed_days": 3, "min": 4, "max": 6 },
+    { "interval": 2, "elapsed_days": 1, "min": 2, "max": 2 }
+  ]
+}

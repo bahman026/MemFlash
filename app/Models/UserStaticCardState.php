@@ -7,7 +7,9 @@ namespace App\Models;
 use App\Fsrs\CardState;
 use App\Models\Concerns\HasFsrsMemory;
 use Carbon\Carbon;
+use Database\Factories\UserStaticCardStateFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,6 +35,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class UserStaticCardState extends Model
 {
+    /** @use HasFactory<UserStaticCardStateFactory> */
+    use HasFactory;
+
     use HasFsrsMemory;
 
     /**

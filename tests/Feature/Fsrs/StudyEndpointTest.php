@@ -105,13 +105,35 @@ it('rejects a rating outside 1 to 4', function (int $rating): void {
 // Authorization: the IDOR that used to be open here
 // -------------------------------------------------------------------------
 
-it('does not let another user read a deck queue', function (): void {
-    $deck = Deck::factory()->for(User::factory())->create();
+it('does not let another user read a private deck queue', function (): void {
+    $deck = Deck::factory()->for(User::factory())->private()->create();
     Card::factory()->for($deck)->create();
 
     $this->actingAs($this->user)
         ->getJson(route('study.cards', $deck))
         ->assertForbidden();
+});
+
+it('does let anyone read a public deck queue', function (): void {
+    // DeckPolicy::view() passes for public decks by design, so reading is allowed.
+    // Writing is not: the review endpoints authorize 'update', which is owner-only.
+    $deck = Deck::factory()->for(User::factory())->public()->create();
+    Card::factory()->for($deck)->create();
+
+    $this->actingAs($this->user)
+        ->getJson(route('study.cards', $deck))
+        ->assertOk();
+});
+
+it('does not let another user review a card in a public deck', function (): void {
+    $deck = Deck::factory()->for(User::factory())->public()->create();
+    $card = Card::factory()->for($deck)->create();
+
+    $this->actingAs($this->user)
+        ->postJson(route('study.update-card', $card), ['rating' => 3])
+        ->assertForbidden();
+
+    expect($card->fresh()->reps)->toBe(0);
 });
 
 it('does not let another user review a card', function (): void {

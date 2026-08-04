@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offline — MemFlash</title>
+    <style>
+        :root { color-scheme: light dark; }
+        body {
+            margin: 0; min-height: 100vh; display: grid; place-items: center;
+            font-family: ui-sans-serif, system-ui, sans-serif;
+            background: #f6f7f5; color: #141613; padding: 2rem;
+        }
+        main { max-width: 30rem; text-align: center; }
+        h1 { font-size: 1.25rem; margin: 0 0 .75rem; }
+        p { margin: 0 0 1rem; color: #6c6f68; line-height: 1.6; }
+        a {
+            display: inline-block; padding: .625rem 1.25rem; border-radius: .5rem;
+            background: #141613; color: #f6f7f5; text-decoration: none; font-weight: 600;
+        }
+        @media (prefers-color-scheme: dark) {
+            body { background: #141613; color: #f6f7f5; }
+            p { color: #9a9d96; }
+            a { background: #f6f7f5; color: #141613; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>You are offline</h1>
+        <p>
+            This page was not saved for offline use. Any reviews you already finished
+            are stored on this device and will sync by themselves once you reconnect.
+        </p>
+        <a href="/dashboard">Open your decks</a>
+    </main>
+</body>
+</html>
