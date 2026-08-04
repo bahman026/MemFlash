@@ -125,4 +125,24 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Email
+    |--------------------------------------------------------------------------
+    |
+    | The single account allowed into the Filament panel at /admin. Read through
+    | config() rather than env() directly: once `artisan optimize` has cached the
+    | config, .env is no longer loaded and env() returns null at runtime.
+    |
+    */
+
+    'admin_email' => env('ADMIN_EMAIL', 'admin@memflash.dev'),
+
+    /*
+    | Initial password for the seeded admin account. Only used by AdminSeeder when
+    | the account does not already exist; change it after first login.
+    */
+
+    'admin_password' => env('ADMIN_PASSWORD', 'password'),
+
 ];

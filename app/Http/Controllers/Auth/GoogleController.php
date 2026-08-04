@@ -20,7 +20,10 @@ class GoogleController extends Controller
     public function handleGoogleCallback()
     {
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            // No ->stateless(): redirectToGoogle() puts an OAuth `state` value in the
+            // session, and stateless() skipped verifying it on the way back, which
+            // removed the CSRF protection on this callback.
+            $googleUser = Socialite::driver('google')->user();
 
             $user = User::query()->firstOrCreate(
                 ['email' => $googleUser->getEmail()],
@@ -31,6 +34,12 @@ class GoogleController extends Controller
                     'level' => \App\Enums\UserLevelEnum::STARTER, // Default level
                 ]
             );
+
+            // Google has already verified the address, but email_verified_at is not
+            // fillable so firstOrCreate() could never set it.
+            if ($user->email_verified_at === null) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
 
             // Check if this is a new user (just created)
             $isNewUser = $user->wasRecentlyCreated;

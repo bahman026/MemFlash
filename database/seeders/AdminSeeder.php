@@ -14,16 +14,26 @@ class AdminSeeder extends Seeder
 
     public function run(): void
     {
+        $email = config('app.admin_email', self::ADMIN_EMAIL);
+
         $user = User::query()->firstOrCreate(
             [
-                'email' => env('ADMIN_EMAIL', self::ADMIN_EMAIL),
+                'email' => $email,
             ],
             [
                 'name' => 'john doe',
-                'email_verified_at' => now(),
-                'password' => env('ADMIN_PASSWORD', 'password'),
-                'status' => UserStatusEnum::ACTIVE->value,
+                'password' => config('app.admin_password', 'password'),
             ]
         );
+
+        // email_verified_at and status are not in User::$fillable, so passing them
+        // to firstOrCreate() silently dropped them -- the admin was left
+        // email-unverified and status fell back to the column default.
+        if ($user->wasRecentlyCreated) {
+            $user->forceFill([
+                'email_verified_at' => now(),
+                'status' => UserStatusEnum::ACTIVE->value,
+            ])->save();
+        }
     }
 }
