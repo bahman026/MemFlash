@@ -2,3 +2,12 @@
 node_modules
 vendor
 docker/volumes
+
+# Symlink created by `artisan storage:link`. It points at an absolute in-container
+# path, so on the host it dangles and the build fails with
+# "invalid file request public/storage". The entrypoint recreates it on boot.
+public/storage
+
+# Vite dev-server marker. If baked into the image, @vite() would load assets from
+# a dev server that isn't running and every page would render unstyled.
+public/hot
