@@ -318,7 +318,20 @@ any of these; several are load-bearing on assumptions I can't verify.
 
 - **No pagination anywhere** — dashboard, `decks.show`, and all static-deck views `get()`/`load()`
   collections that can reach 2,000 cards.
-- **The study UI does not yet show the interval per rating.** Both queue endpoints return
+- **⚠️ Offline is NOT reachable from the study screens.** This is the biggest gap between what
+  exists and what works. `resources/js/offline/*` and `resources/js/fsrs/*` are bundled into
+  `app.js` and exposed as `window.MemFlash`, but the study screens load
+  **`public/js/study-session-unified.js`** via `asset()` — an unbundled copy that calls `fetch()`
+  directly and never touches `window.MemFlash`. So a study session still fails with no network,
+  and in-memory `pendingUpdates` are lost on reload. The engine, the queue, the sync endpoint and
+  the service worker all work and are tested; only the UI call sites are unconverted.
+- **The study JS exists twice.** `resources/js/study-*.js` is Vite-bundled but **never loaded**;
+  the views load `public/js/study-*.js`. Both copies are currently identical — edit both, or
+  better, convert the study screens to the bundled module and delete the `public/js` copies.
+- **The static study screen never calls its own queue endpoint.** `static-decks/study.blade.php`
+  server-renders `$dueCards` into `window.studyConfig.cards`, so `/api/static-study/{deck}/cards`
+  (and its `intervals` payload) is unused on that path.
+- **The study UI does not show the interval per rating.** Both queue endpoints return
   `intervals` (`{state, days, seconds}` per rating 1–4) and the offline mirror can compute
   them, but no view renders them. Parts 8–9 of the spec (the review screen, card browser,
   statistics, and the Archivo / Source Serif / IBM Plex Mono design system with decay-curve

@@ -120,6 +120,10 @@ class StaticDeckController extends Controller
             $cardsPerDay = $this->cardsPerDayFor($user, $staticDeck);
             $dueCards = $this->dueCardsFor($user, $staticDeck, $cardsPerDay);
 
+            // Share one deck instance, so previewIntervals() does not reload the deck
+            // and re-resolve its preset once per card.
+            $dueCards->each->setRelation('staticDeck', $staticDeck);
+
             // Load existing state in one query. Cards with no row have never been
             // seen; they get an unsaved instance so this GET stays read-only and
             // does not create a row per card just to render the queue.

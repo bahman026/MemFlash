@@ -20,23 +20,46 @@ use App\Models\UserStaticDeckSetting;
  */
 class SchedulerFactory
 {
+    /**
+     * Per-request memo, keyed by deck and user.
+     *
+     * Rendering a queue asks for the same scheduler once per card. Without this,
+     * resolving a preset costs a query per card -- 100 cards meant 100 redundant
+     * lookups. The lifetime is one request, so a preset changed mid-request is not
+     * a concern.
+     *
+     * @var array<string, Scheduler>
+     */
+    private array $memo = [];
+
     public function __construct(
         private readonly FuzzSource $fuzz,
     ) {}
 
     public function forDeck(Deck $deck, User $user): Scheduler
     {
-        return $this->build($deck->configOrDefault()->toSchedulerConfig($user));
+        return $this->memo["personal:{$deck->id}:{$user->id}"] ??= $this->build(
+            $deck->configOrDefault()->toSchedulerConfig($user)
+        );
     }
 
     public function forStaticDeck(StaticDeck $staticDeck, User $user): Scheduler
     {
-        $setting = UserStaticDeckSetting::firstOrCreate(
-            ['user_id' => $user->id, 'static_deck_id' => $staticDeck->id],
-            ['cards_per_day' => 10, 'is_active' => true] + DeckConfig::defaults(),
+        return $this->memo["static:{$staticDeck->id}:{$user->id}"] ??= $this->build(
+            UserStaticDeckSetting::firstOrCreate(
+                ['user_id' => $user->id, 'static_deck_id' => $staticDeck->id],
+                ['cards_per_day' => 10, 'is_active' => true] + DeckConfig::defaults(),
+            )->toSchedulerConfig($user)
         );
+    }
 
-        return $this->build($setting->toSchedulerConfig($user));
+    /**
+     * Drop the memo. Only needed if a preset is changed and re-read in the same
+     * request, which the optimizer job does not do.
+     */
+    public function forget(): void
+    {
+        $this->memo = [];
     }
 
     /**

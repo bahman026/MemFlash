@@ -53,6 +53,14 @@ class StudyController extends Controller
                 ->limit($limit)
                 ->get();
 
+            // Point every card at THIS deck instance. Without it, previewIntervals()
+            // calls loadMissing('deck') per card and each fresh Deck re-queries its
+            // config -- 2 extra queries per card, so 200 on a 100-card queue. Sharing
+            // one instance makes loadMissing a no-op and lets configOrDefault() cache
+            // the preset on the first call.
+            $dueCards->each->setRelation('deck', $deck);
+            $deck->configOrDefault();
+
             $cards = $dueCards->map(fn (Card $card): array => [
                 'id' => $card->id,
                 'front' => $card->front,
