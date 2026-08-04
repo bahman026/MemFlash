@@ -9,6 +9,24 @@ jobs:
   create-deployment-artifact:
     name: Create Deployment Artifact
     runs-on: ubuntu-latest
+
+    # The test suite runs on PostgreSQL, the same engine as production. The
+    # migrations use Postgres-native SQL, so SQLite cannot run them.
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_DB: memflash_test
+          POSTGRES_USER: memflash
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U memflash"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v2
 
@@ -34,6 +52,9 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+          # .env.example points DB_HOST at the compose service name; in CI the
+          # postgres service is reachable on localhost via the mapped port.
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
 
       - name: Run Pint Test
         working-directory: ./
