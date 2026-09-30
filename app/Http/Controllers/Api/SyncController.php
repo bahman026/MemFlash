@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Exceptions\StaleReviewException;
+use App\Fsrs\CardState;
 use App\Fsrs\Rating;
 use App\Http\Controllers\Controller;
 use App\Models\Card;
 use App\Models\Deck;
 use App\Models\ReviewLog;
 use App\Models\StaticCard;
+use App\Models\StaticDeck;
 use App\Models\User;
 use App\Models\UserStaticCardState;
+use App\Models\UserStaticDeckProgress;
 use App\Services\ReviewService;
 use Carbon\CarbonInterface;
 use DateTimeImmutable;
@@ -43,10 +46,26 @@ class SyncController extends Controller
      *
      * Deliberately one request. A client about to lose connectivity cannot
      * paginate, so this returns the full working set.
+     *
+     * `?deck=card:12` or `?deck=static_card:5` returns just that deck, in the
+     * same shape. The study screen refreshes the deck it is about to study that
+     * way instead of downloading everything again; 404 when the deck is not the
+     * caller's to study.
      */
     public function bootstrap(Request $request): JsonResponse
     {
         $user = $request->user();
+
+        $only = null;
+        if ($request->filled('deck')) {
+            abort_unless(preg_match('/^(card|static_card):(\d+)$/', (string) $request->query('deck'), $m) === 1, 422, 'deck must look like card:12 or static_card:5.');
+            $only = [$m[1], (int) $m[2]];
+        }
+
+        $decks = $only === null || $only[0] === 'card' ? $this->personalDecks($user, $only[1] ?? null) : [];
+        $staticDecks = $only === null || $only[0] === 'static_card' ? $this->staticDecks($user, $only[1] ?? null) : [];
+
+        abort_if($only !== null && $decks === [] && $staticDecks === [], 404);
 
         return response()->json([
             'synced_at' => now()->toIso8601String(),
@@ -55,9 +74,12 @@ class SyncController extends Controller
                 'timezone' => $user->timezone,
                 'rollover_hour' => (int) $user->rollover_hour,
                 'level' => $user->level->value,
+                // The instant today's study day began. The client counts new cards
+                // it starts offline against the daily limit until the next one.
+                'study_day_started_at' => $this->reviews->startOfStudyDay($user)->toIso8601String(),
             ],
-            'decks' => $this->personalDecks($user),
-            'static_decks' => $this->staticDecks($user),
+            'decks' => $decks,
+            'static_decks' => $staticDecks,
         ]);
     }
 
@@ -95,9 +117,21 @@ class SyncController extends Controller
             ->sortBy(fn (array $r): string => $r['reviewed_at'])
             ->values();
 
+        // First reviews of lesson cards per lesson, for the lesson progress bars.
+        // The online study endpoints record these as they go; replayed offline
+        // reviews have to be counted here or offline study never moves progress.
+        $firstStaticReviews = [];
+
         foreach ($queue as $entry) {
             try {
-                $applied[] = $this->replay($user, $entry);
+                $alreadyApplied = ReviewLog::where('client_uuid', $entry['client_uuid'])->exists();
+                $result = $this->replay($user, $entry);
+                $applied[] = $result;
+
+                if ($entry['type'] === 'static_card' && ! $alreadyApplied && $result['first_review']) {
+                    $deckId = (int) StaticCard::whereKey($entry['card_id'])->value('static_deck_id');
+                    $firstStaticReviews[$deckId] = ($firstStaticReviews[$deckId] ?? 0) + 1;
+                }
             } catch (StaleReviewException $e) {
                 $rejected[] = [
                     'client_uuid' => $entry['client_uuid'],
@@ -115,6 +149,10 @@ class SyncController extends Controller
                     'reason' => 'Could not be applied.',
                 ];
             }
+        }
+
+        foreach ($firstStaticReviews as $deckId => $count) {
+            UserStaticDeckProgress::recordStudied($user, $deckId, $count);
         }
 
         return response()->json([
@@ -208,21 +246,24 @@ class SyncController extends Controller
             'last_review' => $outcome->lastReview->format(DATE_ATOM),
             'reps' => $outcome->reps,
             'lapses' => $outcome->lapses,
+            'first_review' => $outcome->stateBefore === CardState::New,
         ];
     }
 
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function personalDecks(User $user): array
+    private function personalDecks(User $user, ?int $onlyId = null): array
     {
         return $user->decks()
+            ->when($onlyId !== null, fn ($query) => $query->whereKey($onlyId))
             ->with(['cards', 'config'])
             ->get()
             ->map(fn (Deck $deck): array => [
                 'id' => $deck->id,
                 'name' => $deck->name,
                 'new_cards_per_day' => $deck->new_cards_per_day,
+                'new_cards_today' => $this->reviews->newCardsStartedToday($user, Card::class, $deck->cards->pluck('id')),
                 'config' => $this->configPayload($deck->configOrDefault()),
                 'cards' => $deck->cards->map(fn (Card $card): array => [
                     'id' => $card->id,
@@ -248,9 +289,13 @@ class SyncController extends Controller
      *
      * @return array<int, array<string, mixed>>
      */
-    private function staticDecks(User $user): array
+    private function staticDecks(User $user, ?int $onlyId = null): array
     {
-        $decks = $user->getRecommendedStaticDecks()->load('cards');
+        // The full download covers the user's level; a single lesson can be any,
+        // since the study screens let a user open lessons outside their level.
+        $decks = $onlyId === null
+            ? $user->getRecommendedStaticDecks()->load('cards')
+            : StaticDeck::whereKey($onlyId)->with('cards')->get();
 
         $states = UserStaticCardState::query()
             ->where('user_id', $user->id)
@@ -269,6 +314,7 @@ class SyncController extends Controller
                 'level' => $deck->level->value,
                 'lesson_number' => $deck->lesson_number,
                 'cards_per_day' => $setting !== null ? $setting->cards_per_day : 10,
+                'new_cards_today' => $this->reviews->newCardsStartedToday($user, StaticCard::class, $deck->cards->pluck('id')),
                 'config' => $setting !== null
                     ? $this->configPayload($setting)
                     : $this->configPayload($user->staticDeckSettings()->make()),

@@ -110,4 +110,29 @@ class UserStaticDeckProgress extends Model
             $this->markAsCompleted();
         }
     }
+
+    /**
+     * Record a study session against a user's progress in a lesson.
+     *
+     * `$firstReviews` counts cards seen for the first time, not ratings:
+     * counting every rating marked a 50-card lesson "Completed!" after reviewing
+     * the same 10 cards five times, and pushed the bar past 100%. Shared by the
+     * online study endpoints and the offline sync, which replays the same
+     * reviews later.
+     */
+    public static function recordStudied(User $user, int $staticDeckId, int $firstReviews): void
+    {
+        $progress = self::firstOrCreate(
+            ['user_id' => $user->id, 'static_deck_id' => $staticDeckId],
+            ['cards_studied' => 0, 'total_cards' => StaticCard::where('static_deck_id', $staticDeckId)->count()],
+        );
+
+        $progress->updateProgress(
+            min($progress->cards_studied + $firstReviews, max($progress->total_cards, $progress->cards_studied)),
+            [
+                'last_session_cards' => $firstReviews,
+                'last_session_date' => now()->toDateString(),
+            ]
+        );
+    }
 }

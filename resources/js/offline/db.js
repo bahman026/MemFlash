@@ -89,6 +89,29 @@ export async function putCards(cards) {
     });
 }
 
+/**
+ * Replace one deck's cards, leaving every other deck alone. Called when the
+ * study screen refreshes the deck it is about to study.
+ */
+export async function putDeckCards(type, deckId, cards) {
+    const db = await openDb();
+
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(STORE_CARDS, 'readwrite');
+        const store = transaction.objectStore(STORE_CARDS);
+        const existing = store.index('deck').getAllKeys(IDBKeyRange.only([type, deckId]));
+
+        existing.onsuccess = () => {
+            for (const key of existing.result) store.delete(key);
+            for (const card of cards) store.put(card);
+        };
+
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+    });
+}
+
 /** Merge server-authoritative state over whatever was computed locally. */
 export async function updateCard(type, id, patch) {
     const db = await openDb();

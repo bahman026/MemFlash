@@ -15,6 +15,17 @@ if (typeof FullscreenModal === 'undefined' || typeof speakText === 'undefined') 
 // back later in the same session, as Anki's learning queue does.
 const LEARN_AHEAD_SECONDS = 20 * 60;
 
+// "10m", "4d": the label under an answer button. The bundle's formatter when it is
+// loaded; a plain fallback otherwise.
+function formatInterval(seconds) {
+    if (window.MemFlash?.formatInterval) return window.MemFlash.formatInterval(seconds);
+    if (!seconds) return '';
+
+    return seconds >= 86400 ? `${Math.round(seconds / 86400)}d` : `${Math.max(1, Math.round(seconds / 60))}m`;
+}
+
+const ANSWER_BUTTONS = [[1, 'again'], [2, 'hard'], [3, 'good'], [4, 'easy']];
+
 // Identifies one rating, so a save retried after a lost response is recognised by
 // the server instead of being applied twice.
 function newReviewUuid() {
@@ -37,6 +48,10 @@ class StudySession {
         this.pendingUpdates = [];
         this.totalCards = 0;
         this.isRating = false;
+        // window.MemFlash when this session studies from the copy on the device
+        // (IndexedDB); null when it talks to the server directly.
+        this.engine = null;
+        this.deck = null;
         this.autoPronunciationTimeout = null; // Track auto-pronunciation timeout
         this.userHasInteracted = false; // Track if user has interacted with audio
         this.isFirstCard = true; // Track if this is the first card shown
@@ -59,32 +74,79 @@ class StudySession {
 
     async init() {
         try {
-            console.log(`Initializing ${this.config.type} study session...`);
-            
-            if (this.config.type === 'static') {
-                // Static decks: cards are pre-loaded from server
+            this.deck = this.deckRef();
+            this.engine = await this.connectEngine(this.deck);
+
+            if (this.engine) {
+                this.cards = await this.engine.studyQueue(this.deck.type, this.deck.id);
+            } else if (this.config.type === 'static') {
+                // Rendered into the page by the server.
                 this.cards = window.studyConfig?.cards || [];
-                this.totalCards = this.cards.length;
-                console.log('Cards loaded:', this.cards.length);
-                console.log('Cards data:', this.cards);
-                
-                if (this.cards.length === 0) {
-                    console.log('No cards available, showing session complete');
-                    this.showSessionComplete();
-                    return;
-                }
             } else {
-                // User decks: load cards from API
                 await this.loadCards();
             }
 
+            this.totalCards = this.cards.length;
+            this.updateSyncStatus();
+
+            if (this.cards.length === 0) {
+                await this.showSessionComplete();
+                return;
+            }
+
             this.showCurrentCard();
-            console.log('Study session initialized successfully');
         } catch (error) {
             console.error('Failed to initialize study session:', error);
-            console.error('Error details:', error.message, error.stack);
-            this.showError('Failed to load study session. Please try again.');
+            this.showError(error.userMessage || 'Failed to load study session. Please try again.');
         }
+    }
+
+    deckRef() {
+        return this.config.type === 'static'
+            ? { type: 'static_card', id: window.studyConfig?.staticDeckId }
+            : { type: 'card', id: window.studyConfig?.deckId };
+    }
+
+    /**
+     * Study from the copy on this device when the browser allows it.
+     *
+     * Online, answers still waiting on the device are pushed first and this deck
+     * is refreshed from the server; offline, the last downloaded copy is used.
+     * Resolves to null to talk to the server directly instead: no IndexedDB (some
+     * private modes), or a deck the server will not hand over for offline use.
+     */
+    async connectEngine(deck) {
+        const engine = window.MemFlash;
+        if (!engine?.studyQueue || !deck.id || !('indexedDB' in window)) return null;
+
+        try {
+            if (navigator.onLine) {
+                try {
+                    await engine.sync();
+
+                    // A refresh replaces the device's copy, so only with nothing unsynced.
+                    if ((await engine.status()).pending === 0) {
+                        const refreshed = await engine.refreshDeck(deck.type, deck.id);
+                        if (!refreshed.found) return null;
+                    }
+                } catch (error) {
+                    console.warn('Studying from the copy on this device:', error.message);
+                }
+            }
+
+            if (await engine.hasDeck(deck.type, deck.id)) return engine;
+        } catch (error) {
+            console.warn('Offline study unavailable:', error.message);
+            if (navigator.onLine) return null;
+        }
+
+        if (!navigator.onLine) {
+            const error = new Error('Deck not on this device');
+            error.userMessage = 'This deck is not on this device yet. Open it once while online to study it offline.';
+            throw error;
+        }
+
+        return null;
     }
 
     async loadCards() {
@@ -140,6 +202,10 @@ class StudySession {
         document.getElementById('fullscreen-easy-btn').addEventListener('click', () => this.rateCard(4));
         document.getElementById('restart-session').addEventListener('click', () => this.restartSession());
         document.getElementById('retry-btn').addEventListener('click', () => this.retry());
+
+        // Answers taken offline go out as soon as the connection is back.
+        window.addEventListener('online', () => this.syncInBackground());
+        window.addEventListener('offline', () => this.updateSyncStatus());
 
         // Answers are saved as they are given, so this only fires while a save is
         // failing (offline, or the login expired).
@@ -198,6 +264,7 @@ class StudySession {
 
         this.isAnswerShown = false;
         this.updateProgress();
+        this.showIntervals(card);
         
         // Auto-pronunciation with delay (only after user interaction)
         if (this.config.autoPronunciation && this.userHasInteracted) {
@@ -224,23 +291,48 @@ class StudySession {
 
         try {
             const card = this.cards[this.currentCardIndex];
+            const durationMs = this.cardShownAt ? Date.now() - this.cardShownAt : null;
+            let result;
+            let next = card;
+            let saved = false;
 
-            this.pendingUpdates.push({
-                card_id: card.id,
-                rating: rating,
-                review_duration_ms: this.cardShownAt ? Date.now() - this.cardShownAt : null,
-                client_uuid: newReviewUuid(),
-            });
+            if (this.engine) {
+                // Scheduled on the device and queued there durably (IndexedDB), so
+                // nothing is lost offline, on reload or if the tab is closed. The
+                // server replays the raw rating on sync and its answer wins.
+                try {
+                    const outcome = await this.engine.rate(card, rating, durationMs);
+                    result = { state: outcome.state, scheduled_seconds: outcome.scheduledSeconds };
+                    next = outcome.card;
+                    saved = true;
+                    this.syncInBackground();
+                } catch (error) {
+                    // Storage failed (quota, a blocked database): save to the server
+                    // directly from here on rather than losing the answer.
+                    console.warn('Saving on this device failed; saving to the server instead:', error.message);
+                    this.engine = null;
+                }
+            }
 
-            // Saved now, not at the end of the session. Batching everything until
-            // the queue was empty meant leaving early, closing the tab or an expired
-            // login lost every answer, and every card was replayed at one instant.
-            // A failed save stays queued and goes out with the next one.
-            const saved = await this.sendUpdates();
+            if (!saved) {
+                this.pendingUpdates.push({
+                    card_id: card.id,
+                    rating: rating,
+                    review_duration_ms: durationMs,
+                    client_uuid: newReviewUuid(),
+                });
+
+                // Saved now, not at the end of the session. Batching everything until
+                // the queue was empty meant leaving early, closing the tab or an expired
+                // login lost every answer, and every card was replayed at one instant.
+                // A failed save stays queued and goes out with the next one.
+                const saved = await this.sendUpdates();
+                result = saved?.get(card.id);
+            }
 
             this.cards.splice(this.currentCardIndex, 1);
-            if (this.comesBackThisSession(saved?.get(card.id), rating)) {
-                this.cards.push(card);
+            if (this.comesBackThisSession(result, rating)) {
+                this.cards.push(next);
             }
             if (this.currentCardIndex >= this.cards.length) {
                 this.currentCardIndex = 0;
@@ -263,8 +355,9 @@ class StudySession {
     /**
      * Whether a just-rated card is shown again before the session ends.
      *
-     * The server's answer decides: a card still in (re)learning is due again in
-     * minutes, so it comes back. One scheduled further out is done for today.
+     * The scheduler's answer decides (the one on the device, or the server's): a
+     * card still in (re)learning is due again in minutes, so it comes back. One
+     * scheduled further out is done for today.
      * Previously only Easy removed a card, so the last rating every card ever got
      * was Easy. With no answer from the server (offline), only a forgotten card
      * is repeated.
@@ -314,6 +407,74 @@ class StudySession {
         }
     }
 
+    /** Push answers waiting on the device, then refresh the status line. */
+    syncInBackground() {
+        if (!this.engine) return;
+
+        this.engine
+            .sync()
+            .catch((error) => console.warn('Sync deferred:', error.message))
+            .finally(() => this.updateSyncStatus());
+    }
+
+    /** "Offline: … saved on this device" while there is anything to say. */
+    async updateSyncStatus() {
+        const el = document.getElementById('sync-status');
+        if (!el || !this.engine) return;
+
+        let pending = 0;
+        try {
+            pending = (await this.engine.status()).pending;
+        } catch (error) {
+            return;
+        }
+
+        const answers = `${pending} answer${pending === 1 ? '' : 's'}`;
+        let text = '';
+
+        if (!navigator.onLine) {
+            text = pending > 0
+                ? `Offline: ${answers} saved on this device. They sync when you are back online.`
+                : 'Offline: studying from the copy on this device.';
+        } else if (pending > 0) {
+            text = `Saving ${answers}…`;
+        }
+
+        el.textContent = text;
+        el.classList.toggle('hidden', text === '');
+    }
+
+    /**
+     * The real interval under each answer button: from the scheduler on the device,
+     * or from the server's queue payload. The buttons used to show a fixed
+     * "1 day / 2 days / 7 days / 10 days" whatever the card.
+     */
+    async showIntervals(card) {
+        const shownAt = this.cardShownAt;
+        let intervals = card.intervals || null;
+
+        if (this.engine) {
+            try {
+                intervals = await this.engine.preview(card);
+            } catch (error) {
+                intervals = null;
+            }
+        }
+
+        // The next card may already be showing.
+        if (shownAt !== this.cardShownAt) return;
+
+        for (const [rating, name] of ANSWER_BUTTONS) {
+            const label = intervals?.[rating] ? formatInterval(intervals[rating].seconds) : '';
+
+            for (const id of [`${name}-btn`, `fullscreen-${name}-btn`]) {
+                const el = document.querySelector(`#${id} div:last-child`);
+                // A non-breaking space keeps the button's height when there is no label.
+                if (el) el.textContent = label || '\u00a0';
+            }
+        }
+    }
+
     updateProgress() {
         // Counted from the cards actually loaded. The static screen used its daily
         // limit here, so 3 due cards under a limit of 10 started at "7 / 10".
@@ -331,6 +492,7 @@ class StudySession {
     async showSessionComplete() {
         // Fullscreen left open would strand the last card and its dead buttons.
         this.closeFullscreen();
+        this.updateSyncStatus();
 
         if (this.pendingUpdates.length > 0 && !(await this.sendUpdates())) {
             this.showError('Some of your answers could not be saved. Check your connection and try again.');
@@ -364,7 +526,13 @@ class StudySession {
         SessionState.showLoading();
 
         try {
-            if (this.config.type === 'static') {
+            if (this.engine) {
+                // Straight from the device: works offline too.
+                this.cards = await this.engine.studyQueue(this.deck.type, this.deck.id);
+                this.totalCards = this.cards.length;
+                this.currentCardIndex = 0;
+                this.cards.length === 0 ? await this.showSessionComplete() : this.showCurrentCard();
+            } else if (this.config.type === 'static') {
                 // Static decks: reload the page to get fresh cards
                 window.location.reload();
             } else {

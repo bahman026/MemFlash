@@ -272,6 +272,29 @@ ratings. **The server is authoritative.**
 Replay is idempotent through `review_logs.client_uuid` (unique), applied
 oldest-first, and preserves the original timestamp.
 
+**How the study screens use it (since 2026-09-30).** `public/js/study-session-unified.js`
+studies from the device through `window.MemFlash` whenever IndexedDB is available:
+
+1. Online: `sync()` pushes anything queued, then `refreshDeck(type, id)` re-downloads just this
+   deck (`GET /api/sync/bootstrap?deck=card:12`) — only when the queue is empty, because a
+   refresh replaces the device's copy.
+2. `studyQueue(type, id)` picks the cards on the device (`offline/queue.js`, mirroring
+   `getCards` / `dueCardsFor`): due reviews, then new cards up to the daily limit. The bootstrap
+   sends `new_cards_today` per deck and `study_day_started_at`; the client keeps counting.
+3. `rate()` schedules with the mirror, writes the card, and queues the raw rating durably;
+   `sync()` then runs in the background. Nothing is lost offline, on reload or on close.
+4. The dashboard downloads every deck (`bootstrapIfStale`, at most every 6 h, only with an empty
+   queue) and asks the service worker to precache every study page plus the versioned study
+   scripts (listed in a `memflash-offline-assets` meta tag), so an unopened deck works offline.
+
+Without IndexedDB, or for a deck the server will not hand over (someone else's public deck,
+`refreshDeck` → 404), the screen falls back to the direct endpoints (`/api/study/*` batch
+saves). CSRF for the JSON calls comes from the `XSRF-TOKEN` cookie, with one retry after a 419,
+because a page served from the service worker's cache carries a stale meta token.
+
+Tests: `offline/queue.test.mjs` (pure) and `offline/sync.test.mjs`, which runs the real
+`sync.js` + `db.js` against `offline/fake-indexeddb.mjs` with a scripted server.
+
 ### The optimizer
 
 `fsrs:optimize` fits the 21 weights per deck from that deck's own log. Queued
@@ -370,24 +393,16 @@ any of these; several are load-bearing on assumptions I can't verify.
 
 - **No pagination anywhere** — dashboard, `decks.show`, and all static-deck views `get()`/`load()`
   collections that can reach 2,000 cards.
-- **⚠️ Offline is NOT reachable from the study screens.** This is the biggest gap between what
-  exists and what works. `resources/js/offline/*` and `resources/js/fsrs/*` are bundled into
-  `app.js` and exposed as `window.MemFlash`, but the study screens load
-  **`public/js/study-session-unified.js`** via `asset()` — an unbundled copy that calls `fetch()`
-  directly and never touches `window.MemFlash`. So a study session still fails with no network,
-  and in-memory `pendingUpdates` are lost on reload. The engine, the queue, the sync endpoint and
-  the service worker all work and are tested; only the UI call sites are unconverted.
 - **The study JS exists twice.** `resources/js/study-*.js` is Vite-bundled but **never loaded**;
   the views load `public/js/study-*.js`. Both copies are currently identical — edit both, or
   better, convert the study screens to the bundled module and delete the `public/js` copies.
-- **The static study screen never calls its own queue endpoint.** `static-decks/study.blade.php`
-  server-renders `$dueCards` into `window.studyConfig.cards`, so `/api/static-study/{deck}/cards`
-  (and its `intervals` payload) is unused on that path.
-- **The study UI does not show the interval per rating.** Both queue endpoints return
-  `intervals` (`{state, days, seconds}` per rating 1–4) and the offline mirror can compute
-  them, but no view renders them. Parts 8–9 of the spec (the review screen, card browser,
-  statistics, and the Archivo / Source Serif / IBM Plex Mono design system with decay-curve
-  sparklines) are **not built**.
+- **The static study screen never calls its own queue endpoint.** It studies from the device
+  (see Offline); its server-rendered `window.studyConfig.cards` is only the no-IndexedDB fallback,
+  so `/api/static-study/{deck}/cards` is still unused.
+- The answer buttons now show real intervals (from the mirror, or the queue payload's
+  `intervals`). Parts 8–9 of the spec (the review screen, card browser, statistics, and the
+  Archivo / Source Serif / IBM Plex Mono design system with decay-curve sparklines) are
+  **not built**.
 - **`StaticDeckController` still has no authorization or level check.** It is no longer
   destructive to other users, but any authenticated user can study any static deck.
 - **No `POST /api/cards/{id}/forget` or undo endpoint.** `ReviewService::forget()` and

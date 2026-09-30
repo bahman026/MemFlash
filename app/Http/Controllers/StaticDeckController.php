@@ -198,7 +198,7 @@ class StaticDeckController extends Controller
                 clientUuid: $validated['client_uuid'] ?? null,
             );
 
-            $this->touchProgress($user, (int) $card->static_deck_id, $outcome->stateBefore === CardState::New ? 1 : 0);
+            UserStaticDeckProgress::recordStudied($user, (int) $card->static_deck_id, $outcome->stateBefore === CardState::New ? 1 : 0);
 
             return response()->json([
                 'success' => true,
@@ -266,7 +266,7 @@ class StaticDeckController extends Controller
             }
 
             foreach ($studiedPerDeck as $deckId => $firstReviews) {
-                $this->touchProgress($user, (int) $deckId, $firstReviews);
+                UserStaticDeckProgress::recordStudied($user, (int) $deckId, $firstReviews);
             }
 
             return response()->json(['success' => true, 'updated_cards' => $updatedCards]);
@@ -341,26 +341,4 @@ class StaticDeckController extends Controller
     /**
      * Advance the user's deck-level progress counter.
      */
-    /**
-     * Record a study session against the user's progress in a lesson.
-     *
-     * `$studied` counts cards seen for the first time, not ratings: counting
-     * every rating marked a 50-card lesson "Completed!" after reviewing the same
-     * 10 cards five times, and pushed the bar past 100%.
-     */
-    private function touchProgress(User $user, int $staticDeckId, int $studied): void
-    {
-        $progress = UserStaticDeckProgress::firstOrCreate(
-            ['user_id' => $user->id, 'static_deck_id' => $staticDeckId],
-            ['cards_studied' => 0, 'total_cards' => StaticCard::where('static_deck_id', $staticDeckId)->count()],
-        );
-
-        $progress->updateProgress(
-            min($progress->cards_studied + $studied, max($progress->total_cards, $progress->cards_studied)),
-            [
-                'last_session_cards' => $studied,
-                'last_session_date' => now()->toDateString(),
-            ]
-        );
-    }
 }

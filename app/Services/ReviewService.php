@@ -215,15 +215,27 @@ class ReviewService
      */
     public function newCardsLeftToday(User $user, int $dailyLimit, string $type, mixed $cardIds): int
     {
-        $started = ReviewLog::query()
+        return max(0, $dailyLimit - $this->newCardsStartedToday($user, $type, $cardIds));
+    }
+
+    /**
+     * How many new cards this user has started today among the given cards.
+     *
+     * Also sent to the offline client, which keeps counting from here while it
+     * has no connection, so the daily limit holds offline too.
+     *
+     * @param  class-string<Model>  $type  Card or StaticCard
+     * @param  mixed  $cardIds  a query selecting the ids of the cards in scope
+     */
+    public function newCardsStartedToday(User $user, string $type, mixed $cardIds): int
+    {
+        return ReviewLog::query()
             ->where('user_id', $user->id)
             ->where('reviewable_type', (new $type)->getMorphClass())
             ->whereIn('reviewable_id', $cardIds)
             ->where('state_before', CardState::New->value)
             ->where('reviewed_at', '>=', $this->startOfStudyDay($user))
             ->count();
-
-        return max(0, $dailyLimit - $started);
     }
 
     /**

@@ -101,19 +101,19 @@
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 max-w-4xl mx-auto">
                     <button id="again-btn" class="bg-red-500 hover:bg-red-600 text-white px-2 py-2 sm:px-3 sm:py-2 lg:px-4 lg:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center">
                         <div class="text-xs sm:text-sm lg:text-base font-bold mb-1">Again</div>
-                        <div class="text-xs opacity-90">1 day</div>
+                        <div class="text-xs opacity-90">&nbsp;</div>
                     </button>
                     <button id="hard-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-2 py-2 sm:px-3 sm:py-2 lg:px-4 lg:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center">
                         <div class="text-xs sm:text-sm lg:text-base font-bold mb-1">Hard</div>
-                        <div class="text-xs opacity-90">2 days</div>
+                        <div class="text-xs opacity-90">&nbsp;</div>
                     </button>
                     <button id="good-btn" class="bg-green-500 hover:bg-green-600 text-white px-2 py-2 sm:px-3 sm:py-2 lg:px-4 lg:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center">
                         <div class="text-xs sm:text-sm lg:text-base font-bold mb-1">Good</div>
-                        <div class="text-xs opacity-90">7 days</div>
+                        <div class="text-xs opacity-90">&nbsp;</div>
                     </button>
                     <button id="easy-btn" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 sm:px-3 sm:py-2 lg:px-4 lg:py-3 rounded-lg sm:rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-center">
                         <div class="text-xs sm:text-sm lg:text-base font-bold mb-1">Easy</div>
-                        <div class="text-xs opacity-90">10 days</div>
+                        <div class="text-xs opacity-90">&nbsp;</div>
                     </button>
                 </div>
             </div>
@@ -143,5 +143,8 @@
                 Try Again
             </button>
         </div>
+
+        <!-- Offline / sync status, filled in by study-session-unified.js -->
+        <p id="sync-status" class="hidden mt-4 text-sm text-gray-500" aria-live="polite"></p>
     </div>
 </div>

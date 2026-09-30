@@ -334,3 +334,74 @@ it('returns server computed state that overrides whatever the client calculated'
         ->and(round((float) $response->json('applied.0.difficulty'), 4))->toBe(4.9902)
         ->and($response->json('applied.0.state'))->toBe('review');
 });
+
+it('downloads a single deck for the study screen to refresh', function (): void {
+    $deck = Deck::factory()->for($this->user)->create();
+    Card::factory()->for($deck)->count(3)->create();
+    Deck::factory()->for($this->user)->create();
+
+    $this->actingAs($this->user)
+        ->getJson(route('sync.bootstrap', ['deck' => "card:{$deck->id}"]))
+        ->assertOk()
+        ->assertJsonCount(1, 'decks')
+        ->assertJsonPath('decks.0.id', $deck->id)
+        ->assertJsonCount(3, 'decks.0.cards')
+        ->assertJsonCount(0, 'static_decks');
+});
+
+it('will not download a single deck the caller does not own', function (): void {
+    $theirs = Deck::factory()->for(User::factory())->create();
+
+    $this->actingAs($this->user)
+        ->getJson(route('sync.bootstrap', ['deck' => "card:{$theirs->id}"]))
+        ->assertNotFound();
+
+    $this->actingAs($this->user)
+        ->getJson(route('sync.bootstrap', ['deck' => 'nonsense']))
+        ->assertStatus(422);
+});
+
+it('downloads any single lesson, not only those at the user level', function (): void {
+    $lesson = StaticDeck::factory()->create();
+    StaticCard::factory()->for($lesson, 'staticDeck')->count(2)->create();
+
+    $this->actingAs($this->user)
+        ->getJson(route('sync.bootstrap', ['deck' => "static_card:{$lesson->id}"]))
+        ->assertOk()
+        ->assertJsonCount(0, 'decks')
+        ->assertJsonPath('static_decks.0.id', $lesson->id)
+        ->assertJsonCount(2, 'static_decks.0.cards');
+});
+
+it('tells the offline client how many new cards each deck started today', function (): void {
+    $deck = Deck::factory()->for($this->user)->create(['new_cards_per_day' => 5]);
+    $cards = Card::factory()->for($deck)->count(4)->create();
+
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => [
+        ['client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $cards[0]->id, 'rating' => 3, 'reviewed_at' => now()->toIso8601String()],
+        ['client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $cards[1]->id, 'rating' => 3, 'reviewed_at' => now()->toIso8601String()],
+    ]])->assertOk();
+
+    $this->actingAs($this->user)
+        ->getJson(route('sync.bootstrap', ['deck' => "card:{$deck->id}"]))
+        ->assertOk()
+        ->assertJsonPath('decks.0.new_cards_per_day', 5)
+        ->assertJsonPath('decks.0.new_cards_today', 2)
+        ->assertJsonStructure(['user' => ['study_day_started_at']]);
+});
+
+it('moves lesson progress when offline reviews are synced, once per card', function (): void {
+    $lesson = StaticDeck::factory()->create();
+    $cards = StaticCard::factory()->for($lesson, 'staticDeck')->count(5)->create();
+    $queue = [
+        ['client_uuid' => (string) Str::uuid(), 'type' => 'static_card', 'card_id' => $cards[0]->id, 'rating' => 1, 'reviewed_at' => now()->subMinutes(3)->toIso8601String()],
+        ['client_uuid' => (string) Str::uuid(), 'type' => 'static_card', 'card_id' => $cards[0]->id, 'rating' => 3, 'reviewed_at' => now()->subMinutes(2)->toIso8601String()],
+        ['client_uuid' => (string) Str::uuid(), 'type' => 'static_card', 'card_id' => $cards[1]->id, 'rating' => 3, 'reviewed_at' => now()->subMinute()->toIso8601String()],
+    ];
+
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => $queue])->assertOk();
+    // A retried sync must not count the same first reviews again.
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => $queue])->assertOk();
+
+    expect(App\Models\UserStaticDeckProgress::where('user_id', $this->user->id)->sole()->cards_studied)->toBe(2);
+});

@@ -42,6 +42,32 @@ self.addEventListener('activate', (event) => {
     );
 });
 
+/**
+ * The dashboard asks for every study page (and the study scripts) to be kept, so a
+ * deck never opened on this device can still be studied offline. Same origin
+ * only, and never a redirect: a lesson with nothing due redirects to the
+ * dashboard, and serving that for the study URL would be wrong.
+ */
+self.addEventListener('message', (event) => {
+    if (event.data?.type !== 'precache' || !Array.isArray(event.data.urls)) return;
+
+    event.waitUntil(
+        (async () => {
+            const cache = await caches.open(SHELL_CACHE);
+
+            await Promise.allSettled(
+                event.data.urls.map(async (url) => {
+                    const target = new URL(url, self.location.origin);
+                    if (target.origin !== self.location.origin) return;
+
+                    const response = await fetch(target, { credentials: 'same-origin' });
+                    if (response.ok && !response.redirected) await cache.put(target, response);
+                })
+            );
+        })()
+    );
+});
+
 const isAsset = (url) =>
     url.pathname.startsWith('/build/') || url.pathname.startsWith('/js/') || url.pathname.startsWith('/css/');
 

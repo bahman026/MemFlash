@@ -45,6 +45,9 @@
     <script>
         // Pass configuration data to JavaScript
         window.studyConfig = {
+            // Studied from the device's copy when offline study is available; the
+            // cards rendered here are the fallback when it is not.
+            staticDeckId: {{ $staticDeck->id }},
             cards: @json($dueCards->toArray() ?? []),
             totalCards: {{ $cardsPerDay ?? $dueCards->count() ?? 0 }}
         };
