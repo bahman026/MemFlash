@@ -43,11 +43,13 @@ class CardController extends Controller
         $request->validate([
             'front' => 'required|string|max:1000',
             'back' => 'required|string|max:1000',
+            'description' => 'nullable|string|max:2000',
         ], [
             'front.required' => 'Front text is required.',
             'front.max' => 'Front text must not exceed 1000 characters.',
             'back.required' => 'Back text is required.',
             'back.max' => 'Back text must not exceed 1000 characters.',
+            'description.max' => 'Description must not exceed 2000 characters.',
         ]);
 
         // Check if deck has reached card limit
@@ -64,6 +66,7 @@ class CardController extends Controller
         $card = $deck->cards()->create([
             'front' => $request->front,
             'back' => $request->back,
+            'description' => $request->description,
         ]);
 
         Log::info('Card created successfully', [
@@ -96,16 +99,19 @@ class CardController extends Controller
         $request->validate([
             'front' => 'required|string|max:1000',
             'back' => 'required|string|max:1000',
+            'description' => 'nullable|string|max:2000',
         ], [
             'front.required' => 'Front text is required.',
             'front.max' => 'Front text must not exceed 1000 characters.',
             'back.required' => 'Back text is required.',
             'back.max' => 'Back text must not exceed 1000 characters.',
+            'description.max' => 'Description must not exceed 2000 characters.',
         ]);
 
         $card->update([
             'front' => $request->front,
             'back' => $request->back,
+            'description' => $request->description,
         ]);
 
         return redirect()->route('decks.show', $card->deck)->with('success', 'Card updated successfully!');

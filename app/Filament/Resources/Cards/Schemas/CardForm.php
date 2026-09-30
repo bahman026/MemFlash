@@ -6,6 +6,7 @@ namespace App\Filament\Resources\Cards\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -22,6 +23,9 @@ class CardForm
                     ->required(),
                 TextInput::make('back')
                     ->required(),
+                Textarea::make('description')
+                    ->rows(2)
+                    ->maxLength(2000),
                 TextInput::make('audio'),
                 // FSRS memory state is derived by the scheduler from the review
                 // history, so it is shown for diagnosis but not editable --

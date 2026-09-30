@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property positive-int $deck_id
  * @property string $front
  * @property string $back
+ * @property string|null $description
  * @property array|null $audio
  * @property CardState $state
  * @property int|null $step
@@ -65,6 +66,7 @@ class Card extends Model
         'deck_id',
         'front',
         'back',
+        'description',
         'audio',
         'state',
         'step',

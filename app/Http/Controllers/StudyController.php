@@ -65,6 +65,7 @@ class StudyController extends Controller
                 'id' => $card->id,
                 'front' => $card->front,
                 'back' => $card->back,
+                'description' => $card->description,
                 'audio' => $card->audio,
                 'state' => $card->state->value,
                 'stability' => $card->stability,

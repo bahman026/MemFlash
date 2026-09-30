@@ -151,9 +151,12 @@
                                         </div>
                                         <div>
                                             <p class="text-sm font-medium text-gray-900 mb-1">Back</p>
-                                            <p class="text-gray-700">{{ $card->back }}</p>
+                                            <p class="text-gray-700" dir="auto">{{ $card->back }}</p>
                                         </div>
                                     </div>
+                                    @if($card->description)
+                                        <p class="mt-2 text-sm text-gray-500 italic" dir="auto">{{ $card->description }}</p>
+                                    @endif
                                 </div>
                                 <div class="ml-4 flex items-center space-x-2">
                                     <a href="{{ route('cards.edit', $card) }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">

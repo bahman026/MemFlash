@@ -22,6 +22,9 @@ class CardsTable
                     ->searchable(),
                 TextColumn::make('back')
                     ->searchable(),
+                TextColumn::make('description')
+                    ->limit(40)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('state')
                     ->badge()
                     ->sortable(),

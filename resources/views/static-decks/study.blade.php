@@ -49,7 +49,7 @@
             totalCards: {{ $cardsPerDay ?? $dueCards->count() ?? 0 }}
         };
     </script>
-    <script src="{{ asset('js/study-utils.js') }}"></script>
-    <script src="{{ asset('js/study-session-unified.js') }}"></script>
+    <script src="{{ asset('js/study-utils.js') }}?v={{ filemtime(public_path('js/study-utils.js')) }}"></script>
+    <script src="{{ asset('js/study-session-unified.js') }}?v={{ filemtime(public_path('js/study-session-unified.js')) }}"></script>
     @endpush
 </x-layouts.static-deck>

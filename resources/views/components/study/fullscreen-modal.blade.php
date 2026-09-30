@@ -86,6 +86,7 @@
                             Answer
                         </div>
                         <div class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight mb-8" id="fullscreen-answer-text">-</div>
+                        <p class="hidden mb-8 text-lg sm:text-xl md:text-2xl text-gray-500 italic leading-relaxed" id="fullscreen-description-text" dir="auto"></p>
                     </div>
                     
                     <!-- Rating Buttons in Fullscreen -->

@@ -120,18 +120,25 @@
                     <h4 class="text-sm font-semibold text-blue-900 mb-2">Supported File Formats:</h4>
                     <div class="text-xs text-blue-800 space-y-2">
                         <div>
-                            <p class="font-medium mb-1">Option 1: Simple Two-Column Format</p>
-                            <p>English, Persian</p>
+                            <p class="font-medium mb-1">Option 1: Simple Columns</p>
+                            <p>Word, Meaning, Description (optional)</p>
                             <p>critical thinking, تفکر انتقادی</p>
+                            <p>to annoy, to make someone slightly angry, Loud phone calls annoy me.</p>
                         </div>
                         <div>
-                            <p class="font-medium mb-1">Option 2: Google Sheets Format</p>
+                            <p class="font-medium mb-1">Option 2: Named Columns</p>
+                            <p>#, English Word / Phrase, English Meaning, English Example</p>
+                            <p class="text-blue-700">Columns are matched by their header (word / meaning / example or description), in any order. Extra columns such as # are ignored.</p>
+                        </div>
+                        <div>
+                            <p class="font-medium mb-1">Option 3: Google Sheets Format</p>
                             <p>English, Persian, accomplishment, دستاورد</p>
                             <p>English, Persian, critical thinking, تفکر انتقادی</p>
                         </div>
                         <div class="mt-2 pt-2 border-t border-blue-200">
                             <p>• Supported formats: CSV, Excel (.xlsx, .xls)</p>
                             <p>• Headers are automatically detected and skipped</p>
+                            <p>• The description is shown under the answer while studying</p>
                             <p>• Maximum file size: 10MB</p>
                         </div>
                     </div>

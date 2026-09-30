@@ -72,6 +72,11 @@ class DeckCsvExportService
             'Back',
         ];
 
+        // Only personal cards carry a description.
+        if ($deckType === 'user_deck') {
+            $headers[] = 'Description';
+        }
+
         fputcsv($file, $headers);
     }
 
@@ -84,6 +89,10 @@ class DeckCsvExportService
             $card->front,
             $card->back,
         ];
+
+        if ($deckType === 'user_deck') {
+            $row[] = $card->description ?? '';
+        }
 
         fputcsv($file, $row);
     }

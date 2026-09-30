@@ -67,6 +67,20 @@
                     @enderror
                 </div>
 
+                <!-- Description (optional) -->
+                <div class="mb-4 sm:mb-6">
+                    <label for="description" class="block text-sm font-semibold text-gray-700 mb-2">Description <span class="text-gray-400">(optional)</span></label>
+                    <textarea id="description"
+                              name="description"
+                              rows="2"
+                              dir="auto"
+                              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors @error('description') border-red-300 @enderror"
+                              placeholder="An example sentence or note, shown under the answer">{{ old('description') }}</textarea>
+                    @error('description')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <!-- Deck Info -->
                 <div class="mb-4 sm:mb-6 p-4 bg-gray-50 rounded-lg">
                     <h3 class="text-sm font-semibold text-gray-900 mb-3">Deck Information</h3>

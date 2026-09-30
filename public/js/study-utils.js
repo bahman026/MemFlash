@@ -92,6 +92,7 @@ const FullscreenModal = {
         // Update fullscreen content
         document.getElementById('fullscreen-question-text').textContent = questionText;
         document.getElementById('fullscreen-answer-text').textContent = answerText;
+        this.copyDescription();
         
         // Show/hide sections based on current state
         const fullscreenAnswerSection = document.getElementById('fullscreen-answer-section');
@@ -116,6 +117,16 @@ const FullscreenModal = {
         
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
+    },
+
+    // Mirrors the card's description (and whether it has one) into fullscreen.
+    copyDescription() {
+        const source = document.getElementById('card-description');
+        const target = document.getElementById('fullscreen-description-text');
+        if (!source || !target) return;
+
+        target.textContent = source.textContent;
+        target.classList.toggle('hidden', source.textContent === '');
     },
 
     close() {
@@ -146,6 +157,7 @@ const FullscreenModal = {
             // Update fullscreen content
             document.getElementById('fullscreen-question-text').textContent = questionText;
             document.getElementById('fullscreen-answer-text').textContent = answerText;
+            this.copyDescription();
             
             // Show/hide sections based on current state
             const fullscreenAnswerSection = document.getElementById('fullscreen-answer-section');
@@ -237,6 +249,13 @@ function displayCard(card) {
 
     if (cardFront) cardFront.textContent = card.front;
     if (cardBackText) cardBackText.textContent = card.back;
+
+    // Optional example or note, shown under the answer only when the card has one.
+    const cardDescription = document.getElementById('card-description');
+    if (cardDescription) {
+        cardDescription.textContent = card.description || '';
+        cardDescription.classList.toggle('hidden', !card.description);
+    }
 
     // Hide answer and rating buttons
     const cardBack = document.getElementById('card-back');

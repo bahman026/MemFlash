@@ -54,6 +54,7 @@
                     Answer
                 </div>
                 <div class="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl text-gray-700 leading-relaxed px-1 sm:px-2 font-bold" id="card-back-text">-</div>
+                <p class="hidden mt-3 text-base sm:text-lg text-gray-500 italic leading-relaxed px-1 sm:px-2" id="card-description" dir="auto"></p>
             </div>
 
             <!-- Show Answer Button -->
