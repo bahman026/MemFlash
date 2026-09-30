@@ -36,4 +36,5 @@
 
     <!-- Deck Creation Modal -->
     <x-ui.modals.deck-create-modal />
+    <x-pwa.install-prompt />
 </x-layouts.dashboard>

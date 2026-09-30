@@ -4,8 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="canonical" href="{{ url()->current() }}">
-    <link rel="icon" href="{{ asset('assets/images/favicon-300x300.png') }}" sizes="32x32">
-    <link rel="icon" href="{{ asset('assets/images/favicon-150x150.png') }}" sizes="192x192">
+    <link rel="icon" href="{{ asset('flash-cards.svg') }}" type="image/svg+xml">
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+    <x-pwa.head />
 
     <title>Choose Your Level - MemFlash</title>
     <meta name="description" content="Select your learning level to get personalized content">

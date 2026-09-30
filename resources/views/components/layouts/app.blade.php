@@ -7,7 +7,7 @@
     <link rel="icon" href="{{ asset('flash-cards.svg') }}" type="image/svg+xml">
     <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
-    <link rel="apple-touch-icon" href="{{ asset('flash-cards.svg') }}">
+    <x-pwa.head />
 
     {{-- seo related tags --}}
     {{ $seo ?? '' }}
