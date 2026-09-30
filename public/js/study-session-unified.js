@@ -11,6 +11,23 @@ if (typeof FullscreenModal === 'undefined' || typeof speakText === 'undefined') 
     document.head.appendChild(script);
 }
 
+// A card still in (re)learning that is due again within this many seconds comes
+// back later in the same session, as Anki's learning queue does.
+const LEARN_AHEAD_SECONDS = 20 * 60;
+
+// Identifies one rating, so a save retried after a lost response is recognised by
+// the server instead of being applied twice.
+function newReviewUuid() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+
+    const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 class StudySession {
     constructor(config = {}) {
         this.cards = [];
@@ -18,6 +35,8 @@ class StudySession {
         this.deckInfo = null;
         this.isAnswerShown = false;
         this.pendingUpdates = [];
+        this.totalCards = 0;
+        this.isRating = false;
         this.autoPronunciationTimeout = null; // Track auto-pronunciation timeout
         this.userHasInteracted = false; // Track if user has interacted with audio
         this.isFirstCard = true; // Track if this is the first card shown
@@ -31,6 +50,10 @@ class StudySession {
             ...config
         };
 
+        // Attached once, before loading. Attaching them in init() meant a failed
+        // first load left Try Again dead, and a retried init() attached them twice
+        // so every click rated two cards.
+        this.setupEventListeners();
         this.init();
     }
 
@@ -41,6 +64,7 @@ class StudySession {
             if (this.config.type === 'static') {
                 // Static decks: cards are pre-loaded from server
                 this.cards = window.studyConfig?.cards || [];
+                this.totalCards = this.cards.length;
                 console.log('Cards loaded:', this.cards.length);
                 console.log('Cards data:', this.cards);
                 
@@ -52,11 +76,8 @@ class StudySession {
             } else {
                 // User decks: load cards from API
                 await this.loadCards();
-                console.log('Cards loaded, setting up event listeners...');
             }
-            
-            this.setupEventListeners();
-            console.log('Event listeners set up, showing current card...');
+
             this.showCurrentCard();
             console.log('Study session initialized successfully');
         } catch (error) {
@@ -89,6 +110,7 @@ class StudySession {
 
             this.cards = data.cards;
             this.deckInfo = data.deck;
+            this.totalCards = this.cards.length;
 
             console.log('Loaded cards:', this.cards.length);
 
@@ -117,7 +139,16 @@ class StudySession {
         document.getElementById('fullscreen-good-btn').addEventListener('click', () => this.rateCard(3));
         document.getElementById('fullscreen-easy-btn').addEventListener('click', () => this.rateCard(4));
         document.getElementById('restart-session').addEventListener('click', () => this.restartSession());
-        document.getElementById('retry-btn').addEventListener('click', () => this.init());
+        document.getElementById('retry-btn').addEventListener('click', () => this.retry());
+
+        // Answers are saved as they are given, so this only fires while a save is
+        // failing (offline, or the login expired).
+        window.addEventListener('beforeunload', (e) => {
+            if (this.pendingUpdates.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
         
         // Close fullscreen on Escape key
         document.addEventListener('keydown', (e) => {
@@ -187,98 +218,108 @@ class StudySession {
     }
 
     async rateCard(rating) {
-        if (this.cards.length === 0) return;
+        // One rating at a time: a double tap must not grade the next card unseen.
+        if (this.cards.length === 0 || this.isRating) return;
+        this.isRating = true;
 
-        const card = this.cards[this.currentCardIndex];
+        try {
+            const card = this.cards[this.currentCardIndex];
 
-        // Add to pending updates
-        this.pendingUpdates.push({
-            card_id: card.id,
-            rating: rating,
-            review_duration_ms: this.cardShownAt ? Date.now() - this.cardShownAt : null
-        });
+            this.pendingUpdates.push({
+                card_id: card.id,
+                rating: rating,
+                review_duration_ms: this.cardShownAt ? Date.now() - this.cardShownAt : null,
+                client_uuid: newReviewUuid(),
+            });
 
-        // Easy removes the card from this session; the rest come back around.
-        if (rating === 4) {
-            // Easy - remove from array completely
+            // Saved now, not at the end of the session. Batching everything until
+            // the queue was empty meant leaving early, closing the tab or an expired
+            // login lost every answer, and every card was replayed at one instant.
+            // A failed save stays queued and goes out with the next one.
+            const saved = await this.sendUpdates();
+
             this.cards.splice(this.currentCardIndex, 1);
-        } else {
-            // Again, Hard, Good - move to end of array for review
-            const movedCard = this.cards.splice(this.currentCardIndex, 1)[0];
-            this.cards.push(movedCard);
+            if (this.comesBackThisSession(saved?.get(card.id), rating)) {
+                this.cards.push(card);
+            }
+            if (this.currentCardIndex >= this.cards.length) {
+                this.currentCardIndex = 0;
+            }
+
+            this.updateProgress();
+
+            if (this.cards.length === 0) {
+                await this.showSessionComplete();
+                return;
+            }
+
+            this.showCurrentCard();
+            this.updateFullscreenContent();
+        } finally {
+            this.isRating = false;
         }
-
-        // Update progress
-        this.updateProgress();
-
-        // Check if session is complete
-        if (this.shouldEndSession()) {
-            await this.sendUpdates();
-            this.showSessionComplete();
-            return;
-        }
-
-        // Show next card
-        this.showCurrentCard();
-        
-        // Update fullscreen if it's open
-        this.updateFullscreenContent();
     }
 
-    shouldEndSession() {
-        if (this.cards.length === 0) {
-            return true;
-        }
+    /**
+     * Whether a just-rated card is shown again before the session ends.
+     *
+     * The server's answer decides: a card still in (re)learning is due again in
+     * minutes, so it comes back. One scheduled further out is done for today.
+     * Previously only Easy removed a card, so the last rating every card ever got
+     * was Easy. With no answer from the server (offline), only a forgotten card
+     * is repeated.
+     */
+    comesBackThisSession(result, rating) {
+        if (!result) return rating === 1;
 
-        if (this.config.type === 'static') {
-            // Static decks: check daily limit
-            const totalCards = window.studyConfig?.totalCards || 0;
-            const completedCards = totalCards - this.cards.length;
-            return completedCards >= totalCards;
-        }
+        const learning = result.state === 'learning' || result.state === 'relearning';
 
-        // User decks: end when all cards are completed
-        return false;
+        return learning && result.scheduled_seconds <= LEARN_AHEAD_SECONDS;
     }
 
+    /**
+     * Send every queued rating. Resolves to a Map of card id => new state, or null
+     * when the save failed (the ratings then stay queued).
+     */
     async sendUpdates() {
-        if (this.pendingUpdates.length === 0) return;
+        if (this.pendingUpdates.length === 0) return new Map();
+
+        const batch = [...this.pendingUpdates];
 
         try {
             const response = await fetch(this.config.apiEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    // Without it a validation failure comes back as a redirect to
+                    // an HTML page, which fetch follows and reports as a 200.
+                    'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                body: JSON.stringify({
-                    updates: this.pendingUpdates
-                })
+                body: JSON.stringify({ updates: batch })
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update cards');
+                throw new Error(`Saving answers failed with status ${response.status}`);
             }
 
-            console.log('Cards updated successfully');
-            this.pendingUpdates = [];
+            const data = await response.json();
+            this.pendingUpdates = this.pendingUpdates.filter((update) => !batch.includes(update));
+
+            return new Map((data.updated_cards || []).map((result) => [result.id, result]));
         } catch (error) {
             console.error('Failed to send updates:', error);
+
+            return null;
         }
     }
 
     updateProgress() {
-        let totalCards, remainingCards, completedCards;
-
-        if (this.config.type === 'static') {
-            totalCards = window.studyConfig?.totalCards || 0;
-            remainingCards = this.cards.length;
-            completedCards = totalCards > 0 ? totalCards - remainingCards : 0;
-        } else {
-            totalCards = this.deckInfo?.cards_loaded || 0;
-            remainingCards = this.cards.length;
-            completedCards = totalCards - remainingCards;
-        }
+        // Counted from the cards actually loaded. The static screen used its daily
+        // limit here, so 3 due cards under a limit of 10 started at "7 / 10".
+        const totalCards = this.totalCards;
+        const remainingCards = this.cards.length;
+        const completedCards = Math.max(0, totalCards - remainingCards);
 
         updateProgress({
             totalCards,
@@ -287,9 +328,32 @@ class StudySession {
         });
     }
 
-    showSessionComplete() {
+    async showSessionComplete() {
+        // Fullscreen left open would strand the last card and its dead buttons.
+        this.closeFullscreen();
+
+        if (this.pendingUpdates.length > 0 && !(await this.sendUpdates())) {
+            this.showError('Some of your answers could not be saved. Check your connection and try again.');
+            return;
+        }
+
         SessionState.showComplete();
-        this.sendUpdates();
+    }
+
+    async retry() {
+        if (this.pendingUpdates.length > 0) {
+            SessionState.showLoading();
+
+            if (await this.sendUpdates()) {
+                this.cards.length === 0 ? await this.showSessionComplete() : this.showCurrentCard();
+            } else {
+                this.showError('Your answers still could not be saved. Check your connection and try again.');
+            }
+            return;
+        }
+
+        // Nothing unsaved: reloading is the cleanest restart from any failure.
+        window.location.reload();
     }
 
     showError(message) {
@@ -307,7 +371,6 @@ class StudySession {
                 // User decks: reload cards from API
                 await this.loadCards();
                 this.currentCardIndex = 0;
-                this.pendingUpdates = [];
                 this.showCurrentCard();
             }
         } catch (error) {

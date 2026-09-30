@@ -70,6 +70,89 @@ it('respects the new cards per day limit', function (): void {
         ->assertJsonCount(2, 'cards');
 });
 
+it('shows every due review, whatever the new card limit', function (): void {
+    $deck = Deck::factory()->for($this->user)->create(['new_cards_per_day' => 2]);
+    Card::factory()->for($deck)->due()->count(5)->create();
+    Card::factory()->for($deck)->count(10)->create();
+
+    // 5 reviews + 2 new. One limit over the whole queue used to return 2 cards.
+    $this->actingAs($this->user)
+        ->getJson(route('study.cards', $deck))
+        ->assertOk()
+        ->assertJsonCount(7, 'cards');
+});
+
+it('counts new cards already started today against the daily limit', function (): void {
+    $deck = Deck::factory()->for($this->user)->create(['new_cards_per_day' => 3]);
+    $cards = Card::factory()->for($deck)->count(10)->create();
+
+    $this->actingAs($this->user)->postJson(route('study.batch-update'), ['updates' => [
+        ['card_id' => $cards[0]->id, 'rating' => 3],
+        ['card_id' => $cards[1]->id, 'rating' => 3],
+    ]])->assertOk();
+
+    // Those two are now in learning and not due for minutes; one new card is left
+    // for today. A reload used to hand out three more.
+    $this->actingAs($this->user)
+        ->getJson(route('study.cards', $deck))
+        ->assertOk()
+        ->assertJsonCount(1, 'cards');
+});
+
+it('tells the study screen how soon each rated card is due again', function (): void {
+    $card = Card::factory()->for(Deck::factory()->for($this->user))->create();
+
+    $this->actingAs($this->user)->postJson(route('study.batch-update'), ['updates' => [
+        ['card_id' => $card->id, 'rating' => 1, 'client_uuid' => (string) Str::uuid()],
+    ]])->assertOk()
+        ->assertJsonPath('updated_cards.0.state', 'learning')
+        ->assertJsonPath('updated_cards.0.scheduled_seconds', 60);
+});
+
+it('applies a retried save only once', function (): void {
+    $card = Card::factory()->for(Deck::factory()->for($this->user))->create();
+    $update = ['card_id' => $card->id, 'rating' => 3, 'client_uuid' => (string) Str::uuid()];
+
+    $this->actingAs($this->user)->postJson(route('study.batch-update'), ['updates' => [$update]])->assertOk();
+    $this->actingAs($this->user)->postJson(route('study.batch-update'), ['updates' => [$update]])->assertOk();
+
+    expect(ReviewLog::count())->toBe(1)
+        ->and($card->fresh()->reps)->toBe(1);
+});
+
+it('counts new static cards started today against the daily limit', function (): void {
+    $deck = StaticDeck::factory()->create();
+    $cards = StaticCard::factory()->for($deck, 'staticDeck')->count(10)->create();
+
+    $this->actingAs($this->user)->post(route('static-decks.cards-per-day', $deck), ['cards_per_day' => 4]);
+
+    $this->actingAs($this->user)->postJson(route('static-study.batch-update'), ['updates' => [
+        ['card_id' => $cards[0]->id, 'rating' => 3],
+        ['card_id' => $cards[1]->id, 'rating' => 3],
+        ['card_id' => $cards[2]->id, 'rating' => 3],
+    ]])->assertOk()->assertJsonCount(3, 'updated_cards');
+
+    $this->actingAs($this->user)
+        ->getJson(route('static-study.cards', $deck))
+        ->assertOk()
+        ->assertJsonCount(1, 'cards');
+});
+
+it('counts distinct new cards in static progress, not ratings', function (): void {
+    $deck = StaticDeck::factory()->create();
+    $card = StaticCard::factory()->for($deck, 'staticDeck')->create();
+    StaticCard::factory()->for($deck, 'staticDeck')->count(4)->create();
+
+    // The same card three times: Again, Again, Good.
+    foreach ([1, 1, 3] as $rating) {
+        $this->actingAs($this->user)->postJson(route('static-study.batch-update'), ['updates' => [
+            ['card_id' => $card->id, 'rating' => $rating],
+        ]])->assertOk();
+    }
+
+    expect(App\Models\UserStaticDeckProgress::where('user_id', $this->user->id)->sole()->cards_studied)->toBe(1);
+});
+
 // -------------------------------------------------------------------------
 // Review endpoint
 // -------------------------------------------------------------------------

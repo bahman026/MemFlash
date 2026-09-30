@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Fsrs\CardSnapshot;
+use App\Fsrs\CardState;
 use App\Fsrs\Rating;
 use App\Fsrs\ReviewOutcome;
 use App\Fsrs\Scheduler;
@@ -16,6 +17,7 @@ use App\Models\StaticCard;
 use App\Models\StaticDeck;
 use App\Models\User;
 use App\Models\UserStaticCardState;
+use Carbon\CarbonImmutable;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +32,12 @@ use Illuminate\Support\Facades\DB;
  */
 class ReviewService
 {
+    /**
+     * Anki's default ceiling on reviews per day. New cards have their own daily
+     * limit; this only bounds how many due reviews one session loads.
+     */
+    public const MAX_REVIEWS_PER_SESSION = 200;
+
     public function __construct(
         private readonly SchedulerFactory $schedulers,
     ) {}
@@ -191,6 +199,42 @@ class ReviewService
             ->where('user_id', $user->id)
             ->whereIn('static_card_id', $deck->cards()->select('id'))
             ->update(UserStaticCardState::forgottenState());
+    }
+
+    /**
+     * How many new cards this user may still start today among the given cards.
+     *
+     * The limit is per study day, not per page load: counted from the review log
+     * (a card's first review is logged with state_before = new) since the day
+     * began at the user's rollover hour in their timezone, as the scheduler
+     * counts days. Before, each reload of the study queue handed out another
+     * full batch, so the daily limit did not limit anything.
+     *
+     * @param  class-string<Model>  $type  Card or StaticCard
+     * @param  mixed  $cardIds  a query selecting the ids of the cards in scope
+     */
+    public function newCardsLeftToday(User $user, int $dailyLimit, string $type, mixed $cardIds): int
+    {
+        $started = ReviewLog::query()
+            ->where('user_id', $user->id)
+            ->where('reviewable_type', (new $type)->getMorphClass())
+            ->whereIn('reviewable_id', $cardIds)
+            ->where('state_before', CardState::New->value)
+            ->where('reviewed_at', '>=', $this->startOfStudyDay($user))
+            ->count();
+
+        return max(0, $dailyLimit - $started);
+    }
+
+    /**
+     * When the user's current study day began, in UTC.
+     */
+    public function startOfStudyDay(User $user): CarbonImmutable
+    {
+        $local = CarbonImmutable::now($user->timezone ?: 'UTC');
+        $start = $local->setTime((int) ($user->rollover_hour ?? 4), 0);
+
+        return ($local->lt($start) ? $start->subDay() : $start)->utc();
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Fsrs\CardState;
 use App\Fsrs\Rating;
 use App\Models\StaticCard;
 use App\Models\StaticDeck;
@@ -197,7 +198,7 @@ class StaticDeckController extends Controller
                 clientUuid: $validated['client_uuid'] ?? null,
             );
 
-            $this->touchProgress($user, (int) $card->static_deck_id, 1);
+            $this->touchProgress($user, (int) $card->static_deck_id, $outcome->stateBefore === CardState::New ? 1 : 0);
 
             return response()->json([
                 'success' => true,
@@ -235,6 +236,7 @@ class StaticDeckController extends Controller
                 ->keyBy('id');
 
             $studiedPerDeck = [];
+            $updatedCards = [];
 
             foreach ($validated['updates'] as $update) {
                 $card = $cards->get($update['card_id']);
@@ -242,7 +244,7 @@ class StaticDeckController extends Controller
                     continue;
                 }
 
-                $this->reviews->reviewStaticCard(
+                $outcome = $this->reviews->reviewStaticCard(
                     user: $user,
                     card: $card,
                     rating: Rating::from((int) $update['rating']),
@@ -250,14 +252,24 @@ class StaticDeckController extends Controller
                     clientUuid: $update['client_uuid'] ?? null,
                 );
 
-                $studiedPerDeck[(int) $card->static_deck_id][$card->id] = true;
+                $studiedPerDeck[(int) $card->static_deck_id] ??= 0;
+                if ($outcome->stateBefore === CardState::New) {
+                    $studiedPerDeck[(int) $card->static_deck_id]++;
+                }
+
+                $updatedCards[] = [
+                    'id' => $card->id,
+                    'state' => $outcome->state->value,
+                    'scheduled_days' => $outcome->scheduledDays,
+                    'scheduled_seconds' => $outcome->scheduledSeconds,
+                ];
             }
 
-            foreach ($studiedPerDeck as $deckId => $cardIds) {
-                $this->touchProgress($user, (int) $deckId, count($cardIds));
+            foreach ($studiedPerDeck as $deckId => $firstReviews) {
+                $this->touchProgress($user, (int) $deckId, $firstReviews);
             }
 
-            return response()->json(['success' => true]);
+            return response()->json(['success' => true, 'updated_cards' => $updatedCards]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to update cards'], 500);
         }
@@ -276,8 +288,11 @@ class StaticDeckController extends Controller
     /**
      * Cards this user still owes work on, in queue order.
      *
-     * A card with no state row has never been seen, so it counts as new and sorts
-     * after everything already in progress -- the same ordering personal decks use.
+     * Due reviews first, then new cards up to what is left of today's limit. A
+     * card with no state row has never been seen, so it counts as new and sorts
+     * after everything already in progress -- the same ordering personal decks
+     * use. The limit is on new cards per study day; it used to cap the whole
+     * queue per page load, reviews included.
      *
      * @return Collection<int, StaticCard>
      */
@@ -285,24 +300,32 @@ class StaticDeckController extends Controller
     {
         $cardIds = $staticDeck->cards()->select('id');
 
-        $dueIds = UserStaticCardState::query()
+        $states = fn () => UserStaticCardState::query()
             ->where('user_id', $user->id)
-            ->whereIn('static_card_id', $cardIds)
+            ->whereIn('static_card_id', $cardIds);
+
+        $dueIds = $states()
+            ->where('state', '!=', CardState::New->value)
             ->due()
             ->queueOrder()
+            ->limit(ReviewService::MAX_REVIEWS_PER_SESSION)
             ->pluck('static_card_id');
 
-        $seenIds = UserStaticCardState::query()
-            ->where('user_id', $user->id)
-            ->whereIn('static_card_id', $cardIds)
+        // Seen before but new again, e.g. after a reset.
+        $newAgainIds = $states()
+            ->where('state', CardState::New->value)
+            ->orderBy('static_card_id')
             ->pluck('static_card_id');
 
         $unseenIds = $staticDeck->cards()
-            ->whereNotIn('id', $seenIds)
+            ->whereNotIn('id', $states()->select('static_card_id'))
             ->orderBy('id')
             ->pluck('id');
 
-        $ordered = $dueIds->concat($unseenIds)->take($limit);
+        $newIds = $newAgainIds->concat($unseenIds)
+            ->take($this->reviews->newCardsLeftToday($user, $limit, StaticCard::class, $cardIds));
+
+        $ordered = $dueIds->concat($newIds);
 
         if ($ordered->isEmpty()) {
             return new Collection;
@@ -318,6 +341,13 @@ class StaticDeckController extends Controller
     /**
      * Advance the user's deck-level progress counter.
      */
+    /**
+     * Record a study session against the user's progress in a lesson.
+     *
+     * `$studied` counts cards seen for the first time, not ratings: counting
+     * every rating marked a 50-card lesson "Completed!" after reviewing the same
+     * 10 cards five times, and pushed the bar past 100%.
+     */
     private function touchProgress(User $user, int $staticDeckId, int $studied): void
     {
         $progress = UserStaticDeckProgress::firstOrCreate(
@@ -326,7 +356,7 @@ class StaticDeckController extends Controller
         );
 
         $progress->updateProgress(
-            $progress->cards_studied + $studied,
+            min($progress->cards_studied + $studied, max($progress->total_cards, $progress->cards_studied)),
             [
                 'last_session_cards' => $studied,
                 'last_session_date' => now()->toDateString(),

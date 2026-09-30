@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Fsrs\CardState;
 use App\Fsrs\Rating;
 use App\Models\Card;
 use App\Models\Deck;
@@ -47,11 +48,24 @@ class StudyController extends Controller
             $limit = $deck->new_cards_per_day ?? 10;
             $user = $request->user();
 
-            $dueCards = $deck->cards()
+            // The deck's limit is on NEW cards per study day. One limit() over the
+            // whole queue used to cap due reviews as well (10 shown of 50 due, new
+            // cards pushed out), while every reload served a fresh batch.
+            $reviewsDue = $deck->cards()
                 ->due()
+                ->where('state', '!=', CardState::New->value)
                 ->queueOrder()
-                ->limit($limit)
+                ->limit(ReviewService::MAX_REVIEWS_PER_SESSION)
                 ->get();
+
+            $newCards = $deck->cards()
+                ->due()
+                ->where('state', CardState::New->value)
+                ->orderBy('id')
+                ->limit($this->reviews->newCardsLeftToday($user, $limit, Card::class, $deck->cards()->select('id')))
+                ->get();
+
+            $dueCards = $reviewsDue->concat($newCards);
 
             // Point every card at THIS deck instance. Without it, previewIntervals()
             // calls loadMissing('deck') per card and each fresh Deck re-queries its
@@ -197,6 +211,10 @@ class StudyController extends Controller
                     'due' => $outcome->due,
                     'last_review' => $outcome->lastReview,
                     'scheduled_days' => $outcome->scheduledDays,
+                    // The study screen repeats a card within the session when it is
+                    // due again in minutes; `due` itself does not survive JSON as a
+                    // date string, so the interval is sent as a number.
+                    'scheduled_seconds' => $outcome->scheduledSeconds,
                 ];
             }
 
