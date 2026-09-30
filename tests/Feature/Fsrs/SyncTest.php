@@ -178,6 +178,58 @@ it('honours the original review timestamp instead of the sync time', function ()
         ->and($card->fresh()->last_review->startOfMinute()->eq($when))->toBeTrue();
 });
 
+it('drops an offline review older than a later review of the same card', function (): void {
+    $deck = Deck::factory()->for($this->user)->create();
+    $card = Card::factory()->for($deck)->create();
+    $monday = now()->subDays(3)->startOfMinute();
+    $wednesday = now()->subDay()->startOfMinute();
+
+    // Reviewed online on Wednesday...
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => [[
+        'client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $card->id,
+        'rating' => 3, 'reviewed_at' => $wednesday->toIso8601String(),
+    ]]])->assertOk();
+
+    // ...then a phone syncs the rating it took offline on Monday.
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => [[
+        'client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $card->id,
+        'rating' => 1, 'reviewed_at' => $monday->toIso8601String(),
+    ]]])->assertOk()
+        ->assertJsonCount(0, 'applied')
+        ->assertJsonPath('rejected.0.reason', 'Superseded by a later review of this card.');
+
+    expect($card->fresh()->last_review->startOfMinute()->eq($wednesday))->toBeTrue()
+        ->and(ReviewLog::count())->toBe(1);
+});
+
+it('still accepts a retried review that was already applied', function (): void {
+    $card = Card::factory()->for(Deck::factory()->for($this->user))->create();
+    $first = ['client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $card->id, 'rating' => 3, 'reviewed_at' => now()->subHours(2)->toIso8601String()];
+    $second = ['client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $card->id, 'rating' => 3, 'reviewed_at' => now()->subHour()->toIso8601String()];
+
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => [$first, $second]])->assertOk();
+
+    // The whole queue again, as after a lost response: the first entry is now older
+    // than the card's last review, but it is a retry, not a stale review.
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => [$first, $second]])
+        ->assertOk()
+        ->assertJsonCount(2, 'applied')
+        ->assertJsonCount(0, 'rejected');
+
+    expect(ReviewLog::count())->toBe(2);
+});
+
+it('does not let a device clock running ahead date a review in the future', function (): void {
+    $card = Card::factory()->for(Deck::factory()->for($this->user))->create();
+
+    $this->actingAs($this->user)->postJson(route('sync.push'), ['reviews' => [[
+        'client_uuid' => (string) Str::uuid(), 'type' => 'card', 'card_id' => $card->id,
+        'rating' => 3, 'reviewed_at' => now()->addDays(2)->toIso8601String(),
+    ]]])->assertOk();
+
+    expect($card->fresh()->last_review->lte(now()))->toBeTrue();
+});
+
 it('rejects a review for a card the caller does not own without failing the batch', function (): void {
     $mine = Card::factory()->for(Deck::factory()->for($this->user))->create();
     $theirs = Card::factory()->for(Deck::factory()->for(User::factory()))->create();

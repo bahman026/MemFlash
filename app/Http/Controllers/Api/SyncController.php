@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\StaleReviewException;
 use App\Fsrs\Rating;
 use App\Http\Controllers\Controller;
 use App\Models\Card;
@@ -13,6 +14,7 @@ use App\Models\StaticCard;
 use App\Models\User;
 use App\Models\UserStaticCardState;
 use App\Services\ReviewService;
+use Carbon\CarbonInterface;
 use DateTimeImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -96,6 +98,11 @@ class SyncController extends Controller
         foreach ($queue as $entry) {
             try {
                 $applied[] = $this->replay($user, $entry);
+            } catch (StaleReviewException $e) {
+                $rejected[] = [
+                    'client_uuid' => $entry['client_uuid'],
+                    'reason' => $e->getMessage(),
+                ];
             } catch (\Throwable $e) {
                 Log::warning('Offline review rejected during sync', [
                     'user_id' => $user->id,
@@ -118,6 +125,29 @@ class SyncController extends Controller
     }
 
     /**
+     * Refuse a queued review older than the card's current state.
+     *
+     * Rated offline on a phone on Monday, reviewed online on a laptop on
+     * Wednesday, synced on Thursday: replaying Monday's rating would roll the
+     * card's last review and due date back to Monday and throw away Wednesday's
+     * timing. The later review already decided the schedule, so the stale one is
+     * reported and dropped. A retry of a review already applied is not stale; it
+     * is recognised by its client_uuid further down.
+     */
+    private function rejectIfSuperseded(string $uuid, DateTimeImmutable $reviewedAt, ?CarbonInterface $lastReview): void
+    {
+        if ($lastReview === null || $reviewedAt >= $lastReview->toDateTimeImmutable()) {
+            return;
+        }
+
+        if (ReviewLog::where('client_uuid', $uuid)->exists()) {
+            return;
+        }
+
+        throw new StaleReviewException('Superseded by a later review of this card.');
+    }
+
+    /**
      * Apply one queued rating and return the authoritative state.
      *
      * @param  array<string, mixed>  $entry
@@ -125,7 +155,10 @@ class SyncController extends Controller
      */
     private function replay(User $user, array $entry): array
     {
-        $reviewedAt = new DateTimeImmutable((string) $entry['reviewed_at']);
+        // A device clock running ahead would otherwise stamp the card with a last
+        // review in the future, and every later review would see negative elapsed
+        // time. The server's clock wins.
+        $reviewedAt = min(new DateTimeImmutable((string) $entry['reviewed_at']), new DateTimeImmutable);
         $rating = Rating::from((int) $entry['rating']);
         $uuid = (string) $entry['client_uuid'];
         $duration = $entry['review_duration_ms'] ?? null;
@@ -135,6 +168,8 @@ class SyncController extends Controller
 
             // Ownership is checked per entry: a queue is client-supplied data.
             abort_unless($card->deck->user_id === $user->id, 403);
+
+            $this->rejectIfSuperseded($uuid, $reviewedAt, $card->last_review);
 
             $outcome = $this->reviews->reviewCard(
                 user: $user,
@@ -147,6 +182,8 @@ class SyncController extends Controller
             );
         } else {
             $card = StaticCard::with('staticDeck')->findOrFail($entry['card_id']);
+
+            $this->rejectIfSuperseded($uuid, $reviewedAt, $card->stateFor($user)->last_review);
 
             $outcome = $this->reviews->reviewStaticCard(
                 user: $user,
