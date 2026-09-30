@@ -9,6 +9,10 @@
 # Behaviour is controlled by environment variables, all with safe defaults:
 #
 #   DB_FRESH_ON_BOOT=false   true drops and reseeds the database. LOCAL DEV ONLY.
+#                            Deliberately not passed through docker-compose.yml, so
+#                            a value left in .env can never reach it. To rebuild a
+#                            local database run:
+#                            docker compose exec app php artisan migrate:fresh --seed --force
 #   RUN_MIGRATIONS=true      apply pending migrations
 #   SEED_IF_EMPTY=true       seed only when there is no curriculum content yet
 #   BUILD_ASSETS=missing     always | missing | never
@@ -68,6 +72,19 @@ fi
 # depends_on only waits for the container to start, not for Postgres to accept
 # connections, so migrating immediately is a race on a cold boot.
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Forget the previous boot's cached config
+#
+# bootstrap/cache/config.php is on the bind mount, so it survives restarts, and
+# while it exists artisan ignores .env entirely. Clearing it only at the end, as
+# before, meant the database wait, migrate and seed below all ran with whatever
+# the last boot cached: a cache built on the host (DB_HOST=127.0.0.1) failed
+# every boot before reaching the line that would have cleared it, and a changed
+# DB_DATABASE migrated the old database. config:clear needs no database.
+# ---------------------------------------------------------------------------
+
+${ARTISAN} config:clear >/dev/null
 
 log "Waiting for the database (up to ${DB_WAIT_TIMEOUT}s)"
 waited=0

@@ -10,6 +10,19 @@ services:
         container_name: ${CONTAINER_NAME}_app
         restart: unless-stopped
         working_dir: /var/www/html
+        # The entrypoint's switches (docker/entrypoint.sh). Compose only reads .env
+        # to fill in this file, so without this list none of them ever reached the
+        # container. DB_FRESH_ON_BOOT is left out on purpose: a `true` forgotten in
+        # .env would wipe the database on the next restart. To rebuild a local
+        # database: docker compose exec app php artisan migrate:fresh --seed --force
+        environment:
+            RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+            SEED_IF_EMPTY: ${SEED_IF_EMPTY:-true}
+            BUILD_ASSETS: ${BUILD_ASSETS:-missing}
+            INSTALL_DEPS: ${INSTALL_DEPS:-true}
+            CACHE_CONFIG: ${CACHE_CONFIG:-true}
+            RUN_WORKERS: ${RUN_WORKERS:-true}
+            DB_WAIT_TIMEOUT: ${DB_WAIT_TIMEOUT:-60}
         volumes:
             - ./:/var/www/html
         networks:

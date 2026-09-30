@@ -11,3 +11,10 @@ public/storage
 # Vite dev-server marker. If baked into the image, @vite() would load assets from
 # a dev server that isn't running and every page would render unstyled.
 public/hot
+
+# Secrets. `COPY . /var/www/html` otherwise bakes .env (and any .env backups)
+# into an image layer, where anyone with the image can read them. Nothing needs
+# them at build time: at runtime the project bind mount provides the real .env.
+.env
+.env.*
+!.env.example

@@ -3,7 +3,9 @@ name: Deploy Application
 on:
   push:
     branches:
-      - '*'
+      # '**', not '*': in GitHub's branch filters '*' stops at '/', so pushes to
+      # feature/x or fix/y ran no checks at all.
+      - '**'
 
 jobs:
   create-deployment-artifact:

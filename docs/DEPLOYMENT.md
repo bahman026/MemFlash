@@ -64,8 +64,10 @@ server, so it must never drop data — which is why step 4 is `migrate`, not
 
 ## Configuration
 
-All defaults are safe for production. Set these in `.env` or the compose
-environment.
+All defaults are safe for production. Set these in `.env`; `docker-compose.yml`
+passes them to the `app` container (before 2026-09-29 it passed none of them, so
+setting them had no effect). Recreate the container to apply a change:
+`docker compose up -d`.
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -76,7 +78,7 @@ environment.
 | `INSTALL_DEPS` | `true` | `composer install` on boot |
 | `CACHE_CONFIG` | `true` | `artisan optimize` |
 | `DB_WAIT_TIMEOUT` | `60` | Seconds to wait for the database |
-| `DB_FRESH_ON_BOOT` | `false` | ⚠️ **`true` destroys all data.** Local dev only |
+| `DB_FRESH_ON_BOOT` | `false` | ⚠️ **`true` destroys all data.** Not passed by `docker-compose.yml`, so a value in `.env` is ignored. To rebuild a local database use `docker compose exec app php artisan migrate:fresh --seed --force` |
 
 ### Scaling web separately from workers
 
