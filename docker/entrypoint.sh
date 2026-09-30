@@ -177,6 +177,15 @@ else
     warn "Config caching disabled (CACHE_CONFIG=false)"
 fi
 
+# Everything above ran as root, but php-fpm serves as www-data. On a Linux host
+# the root-owned caches and compiled views would then be unwritable by the web
+# process. Worse, if a root process (this script, the queue, the scheduler)
+# creates laravel.log first, every later request that logs fails with a 500.
+# Creating the log here and handing both trees to www-data prevents both.
+touch "${APP_DIR}/storage/logs/laravel.log"
+chown -R www-data:www-data "${APP_DIR}/storage" "${APP_DIR}/bootstrap/cache" \
+    || warn "Could not chown storage/ and bootstrap/cache/ to www-data"
+
 # ---------------------------------------------------------------------------
 # Hand over to PM2
 #
