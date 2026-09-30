@@ -36,14 +36,41 @@ final class Parameters
     public const D_MAX = 10.0;
 
     /**
-     * Bounds enforced after optimization. Keep in sync with fsrs-rs.
+     * Bounds on every weight, from fsrs-rs's parameter clipper (FSRS-6).
+     *
+     * Only w15, w16 and w20 used to be clamped, and the optimizer does ship
+     * values outside the rest: on synthetic history it produced w7 < 0 in four of
+     * nine runs, all marked as improvements, which makes difficulty drift away
+     * from its mean instead of back toward it. w10 < 0 would let a success lower
+     * stability, and w9 < 0 lets it grow without bound. The defaults sit inside
+     * every range (w7 exactly on its floor).
+     *
+     * w15 stays strictly inside (0, 1), a little tighter than fsrs-rs's [0, 1].
      *
      * @var array<int, array{float, float}>
      */
     private const CLAMPS = [
-        15 => [0.001, 0.999],   // hard penalty, strictly inside (0, 1)
-        16 => [1.0, 6.0],       // easy bonus
-        20 => [0.1, 0.8],       // forgetting-curve decay
+        0 => [self::S_MIN, 100.0],   // initial stability, Again
+        1 => [self::S_MIN, 100.0],   // initial stability, Hard
+        2 => [self::S_MIN, 100.0],   // initial stability, Good
+        3 => [self::S_MIN, 100.0],   // initial stability, Easy
+        4 => [1.0, 10.0],            // initial difficulty
+        5 => [0.001, 4.0],
+        6 => [0.001, 4.0],           // difficulty change per grade
+        7 => [0.001, 0.75],          // mean reversion
+        8 => [0.0, 4.5],
+        9 => [0.0, 0.8],
+        10 => [0.001, 3.5],          // recall stability growth
+        11 => [0.001, 5.0],
+        12 => [0.001, 0.25],
+        13 => [0.001, 0.9],
+        14 => [0.0, 4.0],            // post-lapse stability
+        15 => [0.001, 0.999],        // hard penalty, strictly inside (0, 1)
+        16 => [1.0, 6.0],            // easy bonus
+        17 => [0.0, 2.0],
+        18 => [0.0, 2.0],            // same-day stability
+        19 => [0.0, 0.8],
+        20 => [0.1, 0.8],            // forgetting-curve decay
     ];
 
     /** @var list<float> */

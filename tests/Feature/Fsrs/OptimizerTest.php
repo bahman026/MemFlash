@@ -236,10 +236,10 @@ it('keeps every fitted parameter inside its bounds', function (): void {
     $result = (new Optimizer(TrainingSet::forDeck($this->user->id, $this->deck->id)))->run();
     $w = $result['parameters'];
 
-    // The clamps that matter: a hard penalty outside (0,1) or a decay outside
-    // [0.1,0.8] would produce nonsensical schedules.
-    expect($w[15])->toBeGreaterThan(0.0)->toBeLessThan(1.0)
-        ->and($w[16])->toBeGreaterThanOrEqual(1.0)->toBeLessThanOrEqual(6.0)
+    // Every weight, not just w15/w16/w20: the optimizer has shipped w7 < 0.
+    // Constructing Parameters clamps, so a clamped copy must equal the result.
+    expect((new Parameters($w))->toArray())->toBe($w)
+        ->and($w[15])->toBeGreaterThan(0.0)->toBeLessThan(1.0)
         ->and($w[20])->toBeGreaterThanOrEqual(0.1)->toBeLessThanOrEqual(0.8);
 
     // And the result must be usable by the scheduler.

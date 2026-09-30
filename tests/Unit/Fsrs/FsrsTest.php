@@ -43,6 +43,24 @@ it('recomputes FACTOR when w[20] changes', function (): void {
         ->and((new Fsrs($p))->retrievability(7.0, 7.0))->toBeGreaterThan(0.9 - 1e-12);
 });
 
+it('keeps every weight inside the fsrs-rs bounds', function (int $index, float $given, float $expected): void {
+    $w = Parameters::DEFAULTS;
+    $w[$index] = $given;
+
+    expect((new Parameters($w))->get($index))->toBe($expected);
+})->with([
+    'w7 below zero, as the optimizer produced' => [7, -0.0177, 0.001],
+    'w9 negative' => [9, -0.2, 0.0],
+    'w10 negative' => [10, -1.0, 0.001],
+    'w4 above the difficulty ceiling' => [4, 12.0, 10.0],
+    'w0 above the initial stability cap' => [0, 250.0, 100.0],
+    'w17 above its range' => [17, 3.0, 2.0],
+]);
+
+it('leaves the defaults unchanged', function (): void {
+    expect((new Parameters(Parameters::DEFAULTS))->toArray())->toBe(Parameters::DEFAULTS);
+});
+
 it('clamps out-of-range parameters', function (): void {
     $w = Parameters::DEFAULTS;
     $w[15] = 5.0;   // hard penalty must land inside (0, 1)

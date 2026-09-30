@@ -79,7 +79,13 @@ class OptimizeFsrsParameters implements ShouldBeUnique, ShouldQueue
 
         $result = $optimizer->run();
 
-        $this->persist($user, $result);
+        // A fit that does not beat the defaults comes back AS the defaults. Saving
+        // it anyway overwrote a deck's previous, better fit with them every week,
+        // and stamped optimized_at as if something had been learned. The --sync
+        // path in the command already skipped the write.
+        if ($result['improved']) {
+            $this->persist($user, $result);
+        }
 
         Log::info('FSRS optimization complete', [
             'deck' => $this->uniqueId(),
@@ -108,10 +114,11 @@ class OptimizeFsrsParameters implements ShouldBeUnique, ShouldQueue
                 return;
             }
 
-            $user->staticDeckSettings()->updateOrCreate(
-                ['static_deck_id' => $deck->id],
-                $payload + ['cards_per_day' => 10, 'is_active' => true],
-            );
+            // The defaults apply only when the setting row is new; updateOrCreate
+            // with them reset the learner's own cards_per_day on every run.
+            $user->staticDeckSettings()
+                ->firstOrCreate(['static_deck_id' => $deck->id], ['cards_per_day' => 10, 'is_active' => true])
+                ->update($payload);
 
             return;
         }
