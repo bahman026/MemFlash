@@ -91,7 +91,8 @@ export class Fsrs {
     nextDifficulty(difficulty, grade) {
         const deltaD = -this.p.get(6) * (grade - 3);
         const damped = difficulty + (deltaD * (10 - difficulty)) / 9;
-        const target = this.initialDifficulty(Rating.Easy);
+        // Unclamped D0(Easy), as Fsrs::nextDifficulty and the reference implementations.
+        const target = this.p.get(4) - Math.exp(this.p.get(5) * (Rating.Easy - 1)) + 1;
 
         return clamp(this.p.get(7) * target + (1 - this.p.get(7)) * damped, D_MIN, D_MAX);
     }
@@ -230,7 +231,7 @@ export class Scheduler {
      * Grade a card. Returns the new memory state plus the log payload.
      *
      * Order is enforced exactly as on the server: observe elapsed days and R
-     * before mutating, then update D before S.
+     * before mutating, then S from the pre-review D, then D.
      *
      * @param {object} card {state, step, stability, difficulty, lastReview}
      * @param {number} rating 1..4
@@ -282,16 +283,17 @@ export class Scheduler {
             stability = this.fsrs.initialStability(rating);
             difficulty = this.fsrs.initialDifficulty(rating);
         } else {
-            const currentStability = priorStability;
-            difficulty = this.fsrs.nextDifficulty(priorDifficulty, rating);
-
+            // Stability from the pre-review difficulty, then update difficulty
+            // (see Scheduler::review).
             if (elapsedDays < 1) {
-                stability = this.fsrs.stabilitySameDay(currentStability, rating);
+                stability = this.fsrs.stabilitySameDay(priorStability, rating);
             } else if (rating === Rating.Again) {
-                stability = this.fsrs.stabilityAfterLapse(difficulty, currentStability, retrievability);
+                stability = this.fsrs.stabilityAfterLapse(priorDifficulty, priorStability, retrievability);
             } else {
-                stability = this.fsrs.stabilityAfterRecall(difficulty, currentStability, retrievability, rating);
+                stability = this.fsrs.stabilityAfterRecall(priorDifficulty, priorStability, retrievability, rating);
             }
+
+            difficulty = this.fsrs.nextDifficulty(priorDifficulty, rating);
         }
 
         const reps = (card.reps ?? 0) + 1;

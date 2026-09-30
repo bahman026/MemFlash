@@ -53,7 +53,8 @@ final class Scheduler
      *
      * Order matters and is enforced here:
      *   1. observe elapsed_days and R BEFORE mutating anything
-     *   2. update D (F5) BEFORE computing S, because F6 and F7 both take the new D
+     *   2. compute S (F6/F7/F8) from the PRE-review D, then update D (F5) --
+     *      the order of py-fsrs and fsrs-rs, which fitted the default weights
      *   3. transition state and compute the due date
      *   4. fuzz, Review state only
      */
@@ -90,15 +91,21 @@ final class Scheduler
             $stability = $this->fsrs->initialStability($rating);
             $difficulty = $this->fsrs->initialDifficulty($rating);
         } else {
-            $difficulty = $this->fsrs->nextDifficulty($priorDifficulty, $rating);
-
+            // Stability from the difficulty the card had BEFORE this review, then
+            // update difficulty -- the order of py-fsrs, fsrs-rs and the optimizer
+            // that fitted the default weights. Feeding the new D into stability
+            // (as before 2026-09-30) shortened Hard intervals by ~15% and
+            // lengthened Easy ones by ~23% (S=10, D=5 after 10 days: Hard 20 vs
+            // 23 days, Easy 63 vs 51).
             if ($elapsedDays < 1) {
                 $stability = $this->fsrs->stabilitySameDay($priorStability, $rating);
             } elseif ($rating->isLapse()) {
-                $stability = $this->fsrs->stabilityAfterLapse($difficulty, $priorStability, $retrievability);
+                $stability = $this->fsrs->stabilityAfterLapse($priorDifficulty, $priorStability, $retrievability);
             } else {
-                $stability = $this->fsrs->stabilityAfterRecall($difficulty, $priorStability, $retrievability, $rating);
+                $stability = $this->fsrs->stabilityAfterRecall($priorDifficulty, $priorStability, $retrievability, $rating);
             }
+
+            $difficulty = $this->fsrs->nextDifficulty($priorDifficulty, $rating);
         }
 
         // --- 3. counters ---

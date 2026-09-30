@@ -106,7 +106,11 @@ final class Fsrs
      * reversion pulls D back toward D0(Easy) over time, which is what prevents
      * the runaway drift SM-2 users call "ease hell".
      *
-     * The reversion target is D0(4), not w[4] directly.
+     * The reversion target is D0(4) UNCLAMPED, not w[4] and not the clamped
+     * D0(4) a first Easy answer gets. With the default weights it is about
+     * -4.77; clamped to 1, as before 2026-09-30, it pulled every review's D
+     * about 0.006 higher than the reference implementations (py-fsrs
+     * `_initial_difficulty(Easy, clamp=False)`, fsrs-rs) that fitted the weights.
      *
      * Known limitation: D does not depend on R. Recalling a card when R was 1%
      * is far more informative than recalling it at R = 90%, and this formula
@@ -117,7 +121,7 @@ final class Fsrs
     {
         $deltaD = -$this->p->get(6) * ($g->value - 3);
         $damped = $difficulty + $deltaD * (10.0 - $difficulty) / 9.0;
-        $target = $this->initialDifficulty(Rating::Easy);
+        $target = $this->p->get(4) - exp($this->p->get(5) * (Rating::Easy->value - 1)) + 1.0;
 
         return $this->clampDifficulty(
             $this->p->get(7) * $target + (1.0 - $this->p->get(7)) * $damped

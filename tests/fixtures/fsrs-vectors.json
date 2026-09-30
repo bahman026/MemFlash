@@ -1,5 +1,5 @@
 {
-  "_comment": "Reference vectors from the FSRS-6 build specification, Part 4. Read by BOTH the PHP test suite and the JavaScript test suite so the offline mirror cannot drift from the server implementation. Values come from the specification document, not from either implementation.",
+  "_comment": "Reference vectors from the FSRS-6 build specification, Part 4. Read by BOTH the PHP test suite and the JavaScript test suite so the offline mirror cannot drift from the server implementation. Values come from the specification document, not from either implementation. Exception, 2026-09-30: single_review, repeated_good and corrupted_memory_state were recomputed after both implementations switched to the py-fsrs order -- stability from the pre-review difficulty, mean reversion toward the unclamped D0(Easy). The specification had it the other way round. Recomputed with an independent transcription of py-fsrs (fsrs/scheduler.py), which reproduced the previous values exactly before the switch.",
   "parameters": [
     0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194,
     0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629,
@@ -31,12 +31,12 @@
   ],
   "repeated_good": [
     { "review": 1, "day": 0, "retrievability_before": 1.0, "stability_after": 2.3065, "difficulty_after": 2.1181, "next_interval": 2 },
-    { "review": 2, "day": 2, "retrievability_before": 0.9095, "stability_after": 10.9654, "difficulty_after": 2.117, "next_interval": 11 },
-    { "review": 3, "day": 13, "retrievability_before": 0.8998, "stability_after": 46.2632, "difficulty_after": 2.1159, "next_interval": 46 },
-    { "review": 4, "day": 59, "retrievability_before": 0.9004, "stability_after": 162.7036, "difficulty_after": 2.1148, "next_interval": 163 },
-    { "review": 5, "day": 222, "retrievability_before": 0.8999, "stability_after": 496.6417, "difficulty_after": 2.1136, "next_interval": 497 },
-    { "review": 6, "day": 719, "retrievability_before": 0.9, "stability_after": 1342.4723, "difficulty_after": 2.1125, "next_interval": 1342 },
-    { "review": 7, "day": 2061, "retrievability_before": 0.9, "stability_after": 3278.5315, "difficulty_after": 2.1114, "next_interval": 3279 }
+    { "review": 2, "day": 2, "retrievability_before": 0.9095, "stability_after": 10.9643, "difficulty_after": 2.1112, "next_interval": 11 },
+    { "review": 3, "day": 13, "retrievability_before": 0.8998, "stability_after": 46.2802, "difficulty_after": 2.1043, "next_interval": 46 },
+    { "review": 4, "day": 59, "retrievability_before": 0.9004, "stability_after": 162.8622, "difficulty_after": 2.0975, "next_interval": 163 },
+    { "review": 5, "day": 222, "retrievability_before": 0.8999, "stability_after": 497.4472, "difficulty_after": 2.0906, "next_interval": 497 },
+    { "review": 6, "day": 719, "retrievability_before": 0.9001, "stability_after": 1345.5288, "difficulty_after": 2.0837, "next_interval": 1346 },
+    { "review": 7, "day": 2065, "retrievability_before": 0.9, "stability_after": 3292.2796, "difficulty_after": 2.0769, "next_interval": 3292 }
   ],
   "single_review": {
     "stability_before": 10.0,
@@ -44,10 +44,10 @@
     "elapsed_days": 10,
     "retrievability_before": 0.9,
     "cases": [
-      { "grade": 1, "difficulty_after": 8.3475, "stability_after": 1.3489, "interval": 1 },
-      { "grade": 2, "difficulty_after": 6.6718, "stability_after": 19.5559, "interval": 20 },
-      { "grade": 3, "difficulty_after": 4.996, "stability_after": 32.0414, "interval": 32 },
-      { "grade": 4, "difficulty_after": 3.3202, "stability_after": 62.8033, "interval": 63 }
+      { "grade": 1, "difficulty_after": 8.3418, "stability_after": 1.392, "interval": 1 },
+      { "grade": 2, "difficulty_after": 6.666, "stability_after": 23.2469, "interval": 23 },
+      { "grade": 3, "difficulty_after": 4.9902, "stability_after": 32.0267, "interval": 32 },
+      { "grade": 4, "difficulty_after": 3.3145, "stability_after": 51.2539, "interval": 51 }
     ]
   },
   "same_day": {
@@ -79,8 +79,8 @@
         "description": "stability present but exactly 0 -- must floor to S_MIN rather than produce NaN",
         "stability": 0.0,
         "difficulty": 5.0,
-        "expected_stability": 0.1031399681689,
-        "expected_difficulty": 4.996
+        "expected_stability": 0.1030719202221,
+        "expected_difficulty": 4.9902
       },
       {
         "description": "difficulty missing while stability is set -- must be treated as a brand new card, not an established one with a masked default difficulty",

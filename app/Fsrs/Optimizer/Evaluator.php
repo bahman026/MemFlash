@@ -135,9 +135,8 @@ class Evaluator
 
             yield [$predicted, ! $rating->isLapse()];
 
-            // Difficulty before stability: both stability formulas take the new D.
-            $difficulty = $fsrs->nextDifficulty($difficulty, $rating);
-
+            // Same order as Scheduler::review: stability from the pre-review D,
+            // then update D. The fit has to replay exactly what the scheduler does.
             if ($elapsed < 1) {
                 $stability = $fsrs->stabilitySameDay($stability, $rating);
             } elseif ($rating->isLapse()) {
@@ -145,6 +144,8 @@ class Evaluator
             } else {
                 $stability = $fsrs->stabilityAfterRecall($difficulty, $stability, $predicted, $rating);
             }
+
+            $difficulty = $fsrs->nextDifficulty($difficulty, $rating);
         }
     }
 }

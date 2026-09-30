@@ -169,7 +169,11 @@ saves state and appends the `review_logs` row in one transaction.
    There is a test asserting the column does not exist.
 2. **Observe `elapsed_days` and R before mutating** the card. Using post-update state
    silently corrupts every later interval.
-3. **Update D before S.** Both stability formulas take the *new* difficulty.
+3. **Compute S from the pre-review D, then update D.** Both stability formulas (F6, F7) take the
+   difficulty the card had *before* this review, and mean reversion (F5) pulls toward the
+   *unclamped* D0(Easy) (about -4.77 with the defaults). This is the order of py-fsrs, fsrs-rs and
+   the optimizer that produced the default weights. Until 2026-09-30 this rule said the opposite,
+   which shortened Hard intervals ~15% and lengthened Easy ones ~23%.
 4. **Hard (2) is a pass.** Only Again (1) routes to the lapse formula. Ratings are 1–4.
 5. **Recompute `FACTOR` when `w[20]` changes** — never hard-code it.
 6. **Write a `review_logs` row for every review.** No log, no optimizer, ever.
@@ -428,9 +432,11 @@ any of these; several are load-bearing on assumptions I can't verify.
 - CI's `branches: ['*']` skipped any branch with a `/`; now `'**'`.
 - `.dockerignore` now excludes `.env*`, which was baked into image layers.
 
-**Still open by decision:** both stability formulas take the *post-update* D (rule #3 above),
-while py-fsrs / fsrs-rs use the pre-review D. Changing it moves every interval and the pinned
-`single_review` fixture values, so it needs a deliberate call.
+- **Fixed 2026-09-30:** stability took the *post-update* D and mean reversion aimed at the
+  *clamped* D0(Easy); both now follow py-fsrs (rule #3). `single_review`, `repeated_good` and
+  `corrupted_memory_state` in the fixture were recomputed with an independent transcription of
+  py-fsrs that first reproduced the old values exactly. Existing cards keep their stored S/D; only
+  reviews from then on use the corrected order.
 
 ### Fixed on 2026-08-04 — do not "re-fix"
 

@@ -92,8 +92,8 @@ it('reproduces the reference vector through the full stack', function (): void {
 
     expect($outcome->elapsedDays)->toBe(10)
         ->and(round($outcome->retrievabilityBefore, 10))->toBe(0.9)
-        ->and(round($outcome->difficulty, 4))->toBe(4.9960)
-        ->and(round($outcome->stability, 4))->toBe(32.0414)
+        ->and(round($outcome->difficulty, 4))->toBe(4.9902)
+        ->and(round($outcome->stability, 4))->toBe(32.0267)
         ->and($outcome->scheduledDays)->toBe(32);
 });
 
@@ -114,8 +114,8 @@ it('sends a lapsed review card into relearning', function (): void {
     expect($card->state)->toBe(CardState::Relearning)
         ->and($card->step)->toBe(0)
         ->and($card->lapses)->toBe(1)
-        ->and(round((float) $card->stability, 4))->toBe(1.3489)
-        ->and(round((float) $card->difficulty, 4))->toBe(8.3475);
+        ->and(round((float) $card->stability, 4))->toBe(1.3920)
+        ->and(round((float) $card->difficulty, 4))->toBe(8.3418);
 });
 
 it('never stores retrievability but derives it on read', function (): void {
@@ -148,9 +148,9 @@ it('previews an interval for every rating without recording anything', function 
     // Again goes to relearning in 10 minutes, so it reports seconds, not days.
     expect($intervals[Rating::Again->value])->toBe(['state' => 'relearning', 'days' => 0, 'seconds' => 600])
         // Vector 4.4: Hard 20, Good 32, Easy 63 days.
-        ->and($intervals[Rating::Hard->value]['days'])->toBe(20)
+        ->and($intervals[Rating::Hard->value]['days'])->toBe(23)
         ->and($intervals[Rating::Good->value]['days'])->toBe(32)
-        ->and($intervals[Rating::Easy->value]['days'])->toBe(63)
+        ->and($intervals[Rating::Easy->value]['days'])->toBe(51)
         ->and($intervals[Rating::Good->value]['state'])->toBe('review')
         // Previewing must not record or mutate anything.
         ->and(ReviewLog::count())->toBe(0)

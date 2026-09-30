@@ -75,8 +75,9 @@ it('matches the fixture repeated-Good progression', function (): void {
             $d = $this->fsrs->initialDifficulty(Rating::Good);
         } else {
             $r = $this->fsrs->retrievability((float) $elapsed, $s);
-            $d = $this->fsrs->nextDifficulty($d, Rating::Good);
+            // Stability from the pre-review D, then D: the py-fsrs order.
             $s = $this->fsrs->stabilityAfterRecall($d, $s, $r, Rating::Good);
+            $d = $this->fsrs->nextDifficulty($d, Rating::Good);
         }
 
         expect(round($r, 4))->toBe($row['retrievability_before'], "R before {$row['review']}")
@@ -98,10 +99,11 @@ it('matches the fixture single review from a fixed state', function (): void {
 
     foreach ($fixture['cases'] as $case) {
         $grade = Rating::from($case['grade']);
-        $newD = $this->fsrs->nextDifficulty($d, $grade);
+        // Both stability formulas take the PRE-review difficulty.
         $newS = $grade->isLapse()
-            ? $this->fsrs->stabilityAfterLapse($newD, $s, $r)
-            : $this->fsrs->stabilityAfterRecall($newD, $s, $r, $grade);
+            ? $this->fsrs->stabilityAfterLapse($d, $s, $r)
+            : $this->fsrs->stabilityAfterRecall($d, $s, $r, $grade);
+        $newD = $this->fsrs->nextDifficulty($d, $grade);
 
         expect(round($newD, 4))->toBe($case['difficulty_after'], "D grade {$case['grade']}")
             ->and(round($newS, 4))->toBe($case['stability_after'], "S grade {$case['grade']}")

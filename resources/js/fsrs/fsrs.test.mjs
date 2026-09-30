@@ -93,8 +93,9 @@ test('the repeated-Good progression matches the fixture', () => {
             d = fsrs.initialDifficulty(Rating.Good);
         } else {
             r = fsrs.retrievability(elapsed, s);
-            d = fsrs.nextDifficulty(d, Rating.Good);
+            // Stability from the pre-review D, then D: the py-fsrs order.
             s = fsrs.stabilityAfterRecall(d, s, r, Rating.Good);
+            d = fsrs.nextDifficulty(d, Rating.Good);
         }
 
         assert.equal(round(r, 4), row.retrievability_before, `R before ${row.review}`);
@@ -113,11 +114,12 @@ test('a single review from a fixed state matches the fixture', () => {
     assert.equal(round(r, 10), vectors.single_review.retrievability_before);
 
     for (const c of vectors.single_review.cases) {
-        const newD = fsrs.nextDifficulty(d, c.grade);
+        // Both stability formulas take the PRE-review difficulty.
         const newS =
             c.grade === Rating.Again
-                ? fsrs.stabilityAfterLapse(newD, s, r)
-                : fsrs.stabilityAfterRecall(newD, s, r, c.grade);
+                ? fsrs.stabilityAfterLapse(d, s, r)
+                : fsrs.stabilityAfterRecall(d, s, r, c.grade);
+        const newD = fsrs.nextDifficulty(d, c.grade);
 
         assert.equal(round(newD, 4), c.difficulty_after, `D grade ${c.grade}`);
         assert.equal(round(newS, 4), c.stability_after, `S grade ${c.grade}`);
@@ -234,8 +236,8 @@ test('a lapsed review card goes to relearning and matches the fixture', () => {
     assert.equal(out.scheduledSeconds, 600);
     assert.equal(out.lapses, 2);
     assert.equal(out.elapsedDays, 10);
-    assert.equal(round(out.stability, 4), 1.3489);
-    assert.equal(round(out.difficulty, 4), 8.3475);
+    assert.equal(round(out.stability, 4), 1.392);
+    assert.equal(round(out.difficulty, 4), 8.3418);
 });
 
 test('successful review intervals match the fixture end to end', () => {
@@ -335,9 +337,9 @@ test('preview returns all four ratings without mutating the card', () => {
     };
     const previews = scheduler().preview(card, at('2026-01-11T10:00:00Z'));
 
-    assert.equal(previews[Rating.Hard].days, 20);
+    assert.equal(previews[Rating.Hard].days, 23);
     assert.equal(previews[Rating.Good].days, 32);
-    assert.equal(previews[Rating.Easy].days, 63);
+    assert.equal(previews[Rating.Easy].days, 51);
     // Again goes to relearning in ten minutes, so it reports seconds not days.
     assert.equal(previews[Rating.Again].days, 0);
     assert.equal(previews[Rating.Again].seconds, 600);

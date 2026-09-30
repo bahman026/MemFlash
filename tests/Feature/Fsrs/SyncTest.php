@@ -329,8 +329,8 @@ it('returns server computed state that overrides whatever the client calculated'
         'reviewed_at' => now()->toIso8601String(),
     ]]]);
 
-    // Reference vector 4.4 Good: S 32.0414, D 4.9960.
-    expect(round((float) $response->json('applied.0.stability'), 4))->toBe(32.0414)
-        ->and(round((float) $response->json('applied.0.difficulty'), 4))->toBe(4.9960)
+    // Reference vector 4.4 Good: S 32.0267, D 4.9902.
+    expect(round((float) $response->json('applied.0.stability'), 4))->toBe(32.0267)
+        ->and(round((float) $response->json('applied.0.difficulty'), 4))->toBe(4.9902)
         ->and($response->json('applied.0.state'))->toBe('review');
 });

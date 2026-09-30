@@ -159,8 +159,8 @@ it('sends a lapsed review card into relearning', function (): void {
         ->and($out->lapses)->toBe(2)
         ->and($out->elapsedDays)->toBe(10)
         ->and(round($out->retrievabilityBefore, 10))->toBe(0.9)
-        ->and(round($out->stability, 4))->toBe(1.3489)   // vector 4.4 Again
-        ->and(round($out->difficulty, 4))->toBe(8.3475);
+        ->and(round($out->stability, 4))->toBe(1.3920)   // vector 4.4 Again
+        ->and(round($out->difficulty, 4))->toBe(8.3418);
 });
 
 it('keeps a lapsed card in review when there are no relearning steps', function (): void {
@@ -178,9 +178,9 @@ it('keeps successful review cards in review with the F2 interval', function (Rat
     expect($out->state)->toBe(CardState::Review)
         ->and($out->scheduledDays)->toBe($expected);
 })->with([
-    'Hard' => [Rating::Hard, 20],
+    'Hard' => [Rating::Hard, 23],
     'Good' => [Rating::Good, 32],
-    'Easy' => [Rating::Easy, 63],
+    'Easy' => [Rating::Easy, 51],
 ]);
 
 it('graduates from relearning on Good', function (): void {
@@ -295,9 +295,9 @@ it('previews all four ratings without mutating the card', function (): void {
     $previews = scheduler()->preview($card, at('2026-01-11 10:00:00'));
 
     expect($previews)->toHaveCount(4)
-        ->and($previews[Rating::Hard->value]->scheduledDays)->toBe(20)
+        ->and($previews[Rating::Hard->value]->scheduledDays)->toBe(23)
         ->and($previews[Rating::Good->value]->scheduledDays)->toBe(32)
-        ->and($previews[Rating::Easy->value]->scheduledDays)->toBe(63)
+        ->and($previews[Rating::Easy->value]->scheduledDays)->toBe(51)
         // the snapshot is readonly, so it cannot have changed
         ->and($card->stability)->toBe(10.0)
         ->and($card->reps)->toBe(5);

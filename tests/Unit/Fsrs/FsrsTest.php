@@ -28,7 +28,7 @@ it('derives FACTOR from w[20]', function (): void {
 it('satisfies R(S, S) == 0.9 for every S', function (float $s): void {
     expect($this->fsrs->retrievability($s, $s))->toBeGreaterThan(0.9 - 1e-12)
         ->and($this->fsrs->retrievability($s, $s))->toBeLessThan(0.9 + 1e-12);
-})->with([0.001, 0.5, 1.0, 2.3065, 10.0, 100.0, 3278.5315, 36500.0]);
+})->with([0.001, 0.5, 1.0, 2.3065, 10.0, 100.0, 3292.2796, 36500.0]);
 
 it('satisfies I(0.9, S) == S for every S', function (float $s): void {
     expect($this->fsrs->intervalDays($s, 0.90, $this->maxInterval))->toBe((int) round($s));
@@ -96,12 +96,12 @@ it('reproduces the repeated-Good progression', function (): void {
     $expected = [
         // [day, R before, S after, D after, next interval]
         [0,    1.0000,    2.3065,    2.1181,  2],
-        [2,    0.9095,   10.9654,    2.1170, 11],
-        [13,   0.8998,   46.2632,    2.1159, 46],
-        [59,   0.9004,  162.7036,    2.1148, 163],
-        [222,  0.8999,  496.6417,    2.1136, 497],
-        [719,  0.9000, 1342.4723,    2.1125, 1342],
-        [2061, 0.9000, 3278.5315,    2.1114, 3279],
+        [2,    0.9095,   10.9643,    2.1112, 11],
+        [13,   0.8998,   46.2802,    2.1043, 46],
+        [59,   0.9004,  162.8622,    2.0975, 163],
+        [222,  0.8999,  497.4472,    2.0906, 497],
+        [719,  0.9001, 1345.5288,    2.0837, 1346],
+        [2065, 0.9000, 3292.2796,    2.0769, 3292],
     ];
 
     $s = null;
@@ -121,8 +121,9 @@ it('reproduces the repeated-Good progression', function (): void {
             $d = $this->fsrs->initialDifficulty(Rating::Good);
         } else {
             $r = $this->fsrs->retrievability((float) $elapsed, $s);
-            $d = $this->fsrs->nextDifficulty($d, Rating::Good);
+            // Stability from the pre-review D, then D: the py-fsrs order.
             $s = $this->fsrs->stabilityAfterRecall($d, $s, $r, Rating::Good);
+            $d = $this->fsrs->nextDifficulty($d, Rating::Good);
         }
 
         expect(round($r, 4))->toBe($expR, 'R before review ' . ($i + 1))
@@ -146,19 +147,20 @@ it('reproduces a single review from a fixed state', function (Rating $g, float $
     $r = $this->fsrs->retrievability($elapsed, $s);
     expect(round($r, 10))->toBe(0.9);
 
-    $newD = $this->fsrs->nextDifficulty($d, $g);
+    // Both stability formulas take the PRE-review difficulty.
     $newS = $g->isLapse()
-        ? $this->fsrs->stabilityAfterLapse($newD, $s, $r)
-        : $this->fsrs->stabilityAfterRecall($newD, $s, $r, $g);
+        ? $this->fsrs->stabilityAfterLapse($d, $s, $r)
+        : $this->fsrs->stabilityAfterRecall($d, $s, $r, $g);
+    $newD = $this->fsrs->nextDifficulty($d, $g);
 
     expect(round($newD, 4))->toBe($expD)
         ->and(round($newS, 4))->toBe($expS)
         ->and($this->fsrs->intervalDays($newS, $this->dr, $this->maxInterval))->toBe($expInterval);
 })->with([
-    'Again' => [Rating::Again, 8.3475, 1.3489, 1],
-    'Hard' => [Rating::Hard, 6.6718, 19.5559, 20],
-    'Good' => [Rating::Good, 4.9960, 32.0414, 32],
-    'Easy' => [Rating::Easy, 3.3202, 62.8033, 63],
+    'Again' => [Rating::Again, 8.3418, 1.3920, 1],
+    'Hard' => [Rating::Hard, 6.6660, 23.2469, 23],
+    'Good' => [Rating::Good, 4.9902, 32.0267, 32],
+    'Easy' => [Rating::Easy, 3.3145, 51.2539, 51],
 ]);
 
 it('never lets a success reduce stability', function (Rating $g): void {
