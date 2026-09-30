@@ -43,11 +43,18 @@ Deploying is `docker compose up -d --build`. Nothing else.
    connections, so migrating immediately is a race on a cold boot.
 3. Runs `migrate --force` — pending migrations only, existing rows preserved.
 4. Seeds **only when `static_decks` is empty**, so a fresh DB self-bootstraps and a seeded one is
-   left alone.
+   left alone. `DatabaseSeeder` runs in one transaction, so a seed killed part-way leaves the
+   table empty and the next boot retries it.
 5. Builds assets if the Vite manifest is missing, and removes a stale `public/hot`.
 
 Behaviour is env-driven: `RUN_WORKERS`, `RUN_MIGRATIONS`, `SEED_IF_EMPTY`, `BUILD_ASSETS`,
-`INSTALL_DEPS`, `CACHE_CONFIG`, `DB_WAIT_TIMEOUT`, `DB_FRESH_ON_BOOT`. See `docs/DEPLOYMENT.md`.
+`INSTALL_DEPS`, `CACHE_CONFIG`, `DB_WAIT_TIMEOUT`, set in `.env` and passed to the container by
+`docker-compose.yml` (which passed none of them before 2026-09-29). `DB_FRESH_ON_BOOT` is
+deliberately **not** passed through, so a forgotten `true` in `.env` cannot wipe production.
+See `docs/DEPLOYMENT.md`.
+
+The entrypoint runs `config:clear` **before** any database step: a cached config on the bind
+mount otherwise made the DB wait, migrate and seed run against the previous boot's settings.
 
 Two things that will bite you if changed carelessly:
 
@@ -67,7 +74,7 @@ resets every user's SRS scheduling on the shared `static_cards` rows even withou
 To deliberately rebuild from scratch (**local dev only — destroys all data**):
 
 ```bash
-DB_FRESH_ON_BOOT=true docker compose up -d
+docker compose exec app php artisan migrate:fresh --seed --force
 ```
 
 First boot still takes a few minutes to seed ~5,000 cards; nginx returns 502 until php-fpm logs
@@ -391,6 +398,39 @@ any of these; several are load-bearing on assumptions I can't verify.
 - **Study JS is duplicated** between `resources/js/` (Vite) and `public/js/` (unbundled, actually loaded).
 - **`StaticCardSeeder.php`** (1,039 lines) is unregistered legacy code, superseded by the `File*` split.
 - **Test coverage is still two stock stubs.** Factories now exist for every model, so this is unblocked.
+
+### Fixed on 2026-09-29 — do not "re-fix"
+
+- **The study screen only saved when every card ended on Easy.** Only Easy removed a card and
+  ratings were sent in one batch at session end, at one instant, with no `client_uuid`. Each
+  rating is now sent as it is given (with a uuid, so retries dedupe). The server's
+  `scheduled_seconds` decides whether a card comes back in-session: (re)learning and due within
+  20 min. A failed save stays queued and blocks the "Amazing Work!" screen.
+- **A new card's first rating was ignored** (every rating gave Learning step 0 in 60s). It now
+  applies to the steps as in py-fsrs: Easy graduates, Good goes to step 1. Pinned in
+  `fsrs-vectors.json` → `new_card_transitions`, PHP and JS.
+- **"Cards per day" capped the whole queue per page load.** It is now a limit on *new* cards per
+  study day (`ReviewService::newCardsLeftToday`, counted from `review_logs.state_before = new`
+  since the user's rollover). Due reviews are always shown, up to `MAX_REVIEWS_PER_SESSION` (200).
+- **Static progress counted ratings**, so re-reviewing 10 cards "completed" a 50-card lesson. It
+  counts first reviews only and is capped at the lesson size.
+- `/admin` returned 403 to everyone outside `APP_ENV=local`: `User` now implements `FilamentUser`.
+- Blocking a user did nothing: `status` was not fillable and never checked. `AuthMiddleware` and
+  `GoogleController` now refuse blocked users. Logout now invalidates the session.
+- Offline sync applied reviews older than the card's last review (negative elapsed, NaN R). They
+  are rejected as superseded; future timestamps are clamped to now; the scheduler (PHP and JS)
+  never uses negative elapsed days.
+- The optimizer clamped 3 of 21 weights and could ship w7 < 0; all 21 now use fsrs-rs bounds.
+  The job no longer overwrites a previous fit with the defaults when a new fit does not win.
+- The SM-2 backfill took `last_review` from a column holding the due date; a corrective
+  migration moves it back by the interval (rows where `last_review >= due` only).
+- `cards.front`/`back` were varchar(255) under a 1000-character form limit; now `text`.
+- CI's `branches: ['*']` skipped any branch with a `/`; now `'**'`.
+- `.dockerignore` now excludes `.env*`, which was baked into image layers.
+
+**Still open by decision:** both stability formulas take the *post-update* D (rule #3 above),
+while py-fsrs / fsrs-rs use the pre-review D. Changing it moves every interval and the pinned
+`single_review` fixture values, so it needs a deliberate call.
 
 ### Fixed on 2026-08-04 — do not "re-fix"
 
