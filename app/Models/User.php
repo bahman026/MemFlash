@@ -9,6 +9,8 @@ use App\Enums\UserLevelEnum;
 use App\Enums\UserStatusEnum;
 use Carbon\Carbon;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,7 +35,7 @@ use Illuminate\Notifications\Notifiable;
  * @property-read Collection<int, Deck> $decks
  * @property-read Collection<int, UserStaticDeckProgress> $staticDeckProgress
  */
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
@@ -69,6 +71,10 @@ class User extends Authenticatable
         'avatar',
         'level',
         'preferences',
+        // Both are set from the admin's user form, which saves with update($data).
+        // Left out, "Block" and "verified" were silently dropped on save.
+        'status',
+        'email_verified_at',
     ];
 
     /**
@@ -95,6 +101,23 @@ class User extends Authenticatable
             'level' => UserLevelEnum::class,
             'preferences' => 'array',
         ];
+    }
+
+    /**
+     * Who may open the Filament admin panel.
+     *
+     * Without this contract Filament's own middleware allows every signed-in user
+     * when APP_ENV is local and nobody at all otherwise, so the panel returned 403
+     * to the admin in production before AdminAccess was even reached.
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->email === config('app.admin_email') && ! $this->isBlocked();
+    }
+
+    public function isBlocked(): bool
+    {
+        return $this->status === UserStatusEnum::BLOCK;
     }
 
     /**

@@ -11,6 +11,7 @@ use App\Http\Controllers\LevelSelectionController;
 use App\Http\Controllers\StaticDeckController;
 use App\Http\Controllers\StudyController;
 use App\Http\Middleware\AuthMiddleware;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Public routes (no authentication required)
@@ -40,8 +41,13 @@ Route::get('/login', function () {
 Route::middleware([AuthMiddleware::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::post('/logout', function () {
+    Route::post('/logout', function (Request $request) {
         auth()->logout();
+
+        // A fresh session and CSRF token, so nothing from the signed-in session
+        // (flash data, the old token) survives into the next visitor's.
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('welcome');
     })->name('logout');

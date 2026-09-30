@@ -41,6 +41,10 @@ class GoogleController extends Controller
                 $user->forceFill(['email_verified_at' => now()])->save();
             }
 
+            if ($user->isBlocked()) {
+                return redirect()->route('login.page')->with('error', 'Your account has been blocked.');
+            }
+
             // Check if this is a new user (just created)
             $isNewUser = $user->wasRecentlyCreated;
 

@@ -17,6 +17,16 @@ class AuthMiddleware
             return redirect()->route('login.page');
         }
 
+        // Blocking takes effect on the next request, including for a user still
+        // holding a remember-me cookie from before they were blocked.
+        if ($request->user()->isBlocked()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login.page')->with('error', 'Your account has been blocked.');
+        }
+
         return $next($request);
     }
 }
