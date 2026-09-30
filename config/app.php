@@ -139,6 +139,13 @@ return [
     'admin_email' => env('ADMIN_EMAIL', 'admin@memflash.dev'),
 
     /*
+    | Where users can reach the operator, shown on the privacy policy and terms.
+    | Left unset, those pages omit the address rather than print a placeholder.
+    */
+
+    'contact_email' => env('CONTACT_EMAIL'),
+
+    /*
     | Initial password for the seeded admin account. Only used by AdminSeeder when
     | the account does not already exist; change it after first login.
     */

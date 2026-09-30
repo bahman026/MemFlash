@@ -126,9 +126,9 @@
                     <div class="text-center">
                         <p class="text-sm text-gray-500">
                             By continuing, you agree to our
-                            <a href="#" class="text-blue-600 hover:text-blue-500 font-medium">Terms of Service</a>
+                            <a href="{{ route('terms') }}" class="text-blue-600 hover:text-blue-500 font-medium">Terms of Service</a>
                             and
-                            <a href="#" class="text-blue-600 hover:text-blue-500 font-medium">Privacy Policy</a>
+                            <a href="{{ route('privacy') }}" class="text-blue-600 hover:text-blue-500 font-medium">Privacy Policy</a>
                         </p>
                     </div>
                 </div>

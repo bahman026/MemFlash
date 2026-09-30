@@ -6,6 +6,11 @@
         <p class="text-sm text-gray-400 mb-4">
             Built with ❤️ for learners everywhere
         </p>
+        <p class="text-sm text-gray-400 mb-4">
+            <a href="{{ route('privacy') }}" class="hover:text-gray-600 transition-colors">Privacy Policy</a>
+            &middot;
+            <a href="{{ route('terms') }}" class="hover:text-gray-600 transition-colors">Terms of Service</a>
+        </p>
         <div class="flex justify-center">
             <a href="https://github.com/bahman026/MemFlash" target="_blank" rel="noopener noreferrer" class="inline-flex items-center text-gray-400 hover:text-gray-600 transition-colors">
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">

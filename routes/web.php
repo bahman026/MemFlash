@@ -19,6 +19,11 @@ Route::get('/', function () {
     return view('pages.index');
 })->name('welcome');
 
+// Public so Google can link them from the sign-in consent screen: publishing the
+// OAuth app requires a home page and a privacy policy URL.
+Route::view('/privacy', 'pages.privacy')->name('privacy');
+Route::view('/terms', 'pages.terms')->name('terms');
+
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 

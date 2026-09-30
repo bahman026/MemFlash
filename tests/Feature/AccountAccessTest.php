@@ -58,3 +58,23 @@ it('starts a fresh session on logout', function (): void {
     $this->assertGuest();
     expect(session('kept'))->toBeNull();
 });
+
+it('serves the privacy policy to signed-out visitors', function (): void {
+    // Google links it from the sign-in consent screen once the app is published.
+    $this->get(route('privacy'))
+        ->assertOk()
+        ->assertSee('Privacy Policy')
+        ->assertSee('Google API Services User Data Policy');
+});
+
+it('serves the terms to signed-out visitors', function (): void {
+    $this->get(route('terms'))->assertOk()->assertSee('Terms of Service');
+});
+
+it('shows the contact address on the legal pages only when one is configured', function (): void {
+    $this->get(route('privacy'))->assertOk()->assertDontSee('mailto:', false);
+
+    config(['app.contact_email' => 'hello@example.test']);
+
+    $this->get(route('privacy'))->assertOk()->assertSee('mailto:hello@example.test', false);
+});
