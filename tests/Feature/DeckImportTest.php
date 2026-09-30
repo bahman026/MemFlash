@@ -168,3 +168,15 @@ it('saves a description typed into the card form', function (): void {
 
     expect(Card::query()->sole()->description)->toBe('It amazes me how fast she codes.');
 });
+
+it('accepts a card longer than 255 characters', function (): void {
+    $deck = Deck::factory()->for($this->user)->create();
+    $long = trim(str_repeat('a definition that runs long ', 20)); // 559 characters
+
+    $this->actingAs($this->user)->post(route('cards.store', $deck), [
+        'front' => 'to digress',
+        'back' => $long,
+    ])->assertSessionHasNoErrors();
+
+    expect(Card::query()->sole()->back)->toBe($long);
+});

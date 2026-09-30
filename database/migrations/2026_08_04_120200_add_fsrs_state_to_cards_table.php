@@ -80,7 +80,10 @@ return new class extends Migration
             'stability' => DB::raw('GREATEST(COALESCE("interval", 1)::double precision, ' . $sMin . ')'),
             'difficulty' => DB::raw($difficulty),
             'due' => DB::raw('COALESCE(revised_at, NOW())'),
-            'last_review' => DB::raw('last_reviewed'),
+            // Not last_reviewed: until 793196a the SM-2 code wrote it from the same
+            // Carbon instance it had just advanced to the due date, so it held the
+            // NEXT due date. The real last review is the due date minus the interval.
+            'last_review' => DB::raw('CASE WHEN revised_at IS NOT NULL THEN revised_at - make_interval(days => COALESCE("interval", 1)) ELSE last_reviewed END'),
             'reps' => DB::raw('GREATEST(COALESCE(repetitions, 0), 1)'),
         ]);
 

@@ -53,6 +53,23 @@ it('defaults a new card to the new state with no memory yet', function (): void 
         ->and((bool) $row->suspended)->toBeFalse();
 });
 
+it('moves last_review back from the due date on cards carried over from SM-2', function (): void {
+    $deck = Deck::factory()->create();
+    $due = now()->startOfSecond();
+
+    // As the backfill left it: last_review copied from SM-2's last_reviewed, which
+    // held the due date, and stability set to the old 10-day interval.
+    $migrated = $deck->cards()->create(['front' => 'a', 'back' => 'b', 'state' => 'review', 'stability' => 10.0, 'difficulty' => 5.0, 'due' => $due, 'last_review' => $due]);
+
+    // Reviewed under FSRS since: due after last_review, so it must not move.
+    $reviewed = $deck->cards()->create(['front' => 'c', 'back' => 'd', 'state' => 'review', 'stability' => 10.0, 'difficulty' => 5.0, 'due' => $due, 'last_review' => $due->copy()->subDays(4)]);
+
+    (require database_path('migrations/2026_09_29_120100_correct_backfilled_last_review_on_cards.php'))->up();
+
+    expect($migrated->fresh()->last_review->toDateTimeString())->toBe($due->copy()->subDays(10)->toDateTimeString())
+        ->and($reviewed->fresh()->last_review->toDateTimeString())->toBe($due->copy()->subDays(4)->toDateTimeString());
+});
+
 it('enforces one review log per client uuid so a retried sync cannot double apply', function (): void {
     $deck = Deck::factory()->create();
     $card = $deck->cards()->create(['front' => 'x', 'back' => 'y']);
