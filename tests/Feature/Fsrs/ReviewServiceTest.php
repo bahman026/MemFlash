@@ -42,7 +42,7 @@ it('takes a new card into learning and logs the review', function (): void {
     $card->refresh();
 
     expect($card->state)->toBe(CardState::Learning)
-        ->and($card->step)->toBe(0)
+        ->and($card->step)->toBe(1) // Good on a new card moves past the first step
         ->and(round((float) $card->stability, 4))->toBe(2.3065)   // S0(Good)
         ->and(round((float) $card->difficulty, 4))->toBe(2.1181)  // D0(Good)
         ->and($card->reps)->toBe(1)

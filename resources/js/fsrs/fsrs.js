@@ -270,7 +270,8 @@ export class Scheduler {
             priorStability = Math.max(S_MIN, Number(card.stability));
             priorDifficulty = Math.min(D_MAX, Math.max(D_MIN, Number(card.difficulty)));
 
-            elapsedDays = this.dayDifference(new Date(card.lastReview), now);
+            // Never negative; see Scheduler::review.
+            elapsedDays = Math.max(0, this.dayDifference(new Date(card.lastReview), now));
             retrievability = this.fsrs.retrievability(elapsedDays, priorStability);
         }
 
@@ -346,9 +347,10 @@ export class Scheduler {
         const graduate = () => [CardState.Review, null, this.intervalDays(stability) * SECONDS_PER_DAY];
         const { learningSteps, relearningSteps } = this.config;
 
+        // A new card enters Learning at step 0 and its first rating moves it along
+        // the steps like any learning answer (see Scheduler::transition).
         if (isNew) {
-            if (learningSteps.length === 0) return graduate();
-            return [CardState.Learning, 0, learningSteps[0]];
+            return this.stepTransition(CardState.Learning, 0, learningSteps, rating, graduate);
         }
 
         if (card.state === CardState.Review) {
@@ -359,20 +361,24 @@ export class Scheduler {
         }
 
         const steps = card.state === CardState.Relearning ? relearningSteps : learningSteps;
-        const step = card.step ?? 0;
 
+        return this.stepTransition(card.state, card.step ?? 0, steps, rating, graduate);
+    }
+
+    /** Mirrors Scheduler::stepTransition. */
+    stepTransition(state, step, steps, rating, graduate) {
         if (steps.length === 0 || step >= steps.length) return graduate();
 
         switch (rating) {
             case Rating.Again:
-                return [card.state, 0, steps[0]];
+                return [state, 0, steps[0]];
             case Rating.Hard:
-                if (step === 0 && steps.length === 1) return [card.state, step, Math.round(steps[0] * 1.5)];
-                if (step === 0) return [card.state, step, Math.round((steps[0] + steps[1]) / 2)];
-                return [card.state, step, steps[step]];
+                if (step === 0 && steps.length === 1) return [state, step, Math.round(steps[0] * 1.5)];
+                if (step === 0) return [state, step, Math.round((steps[0] + steps[1]) / 2)];
+                return [state, step, steps[step]];
             case Rating.Good:
                 if (step + 1 >= steps.length) return graduate();
-                return [card.state, step + 1, steps[step + 1]];
+                return [state, step + 1, steps[step + 1]];
             case Rating.Easy:
                 return graduate();
             default:

@@ -171,8 +171,8 @@ const at = (iso) => new Date(iso);
 const scheduler = (overrides = {}, random = () => 0) =>
     new Scheduler({ enableFuzzing: false, ...overrides }, random);
 
-test('a new card enters learning on the first step', () => {
-    const out = scheduler().review({ state: CardState.New }, Rating.Good, at('2026-01-01T10:00:00Z'));
+test('a new card enters learning with its first review', () => {
+    const out = scheduler().review({ state: CardState.New }, Rating.Again, at('2026-01-01T10:00:00Z'));
 
     assert.equal(out.state, CardState.Learning);
     assert.equal(out.step, 0);
@@ -180,6 +180,16 @@ test('a new card enters learning on the first step', () => {
     assert.equal(out.elapsedDays, 0);
     assert.equal(out.retrievabilityBefore, 1);
     assert.equal(out.reps, 1);
+});
+
+test('applies the first rating on a new card to the learning steps, as PHP does', () => {
+    for (const c of vectors.new_card_transitions.cases) {
+        const out = scheduler().review({ state: CardState.New }, c.rating, at('2026-01-01T10:00:00Z'));
+
+        assert.equal(out.state, c.state, `rating ${c.rating}`);
+        assert.equal(out.step, c.step, `rating ${c.rating}`);
+        assert.equal(out.scheduledSeconds, c.seconds, `rating ${c.rating}`);
+    }
 });
 
 test('a new card graduates when there are no learning steps', () => {

@@ -148,6 +148,21 @@ it('matches the fixture for corrupted memory state', function (): void {
     }
 });
 
+it('matches the fixture first-rating transitions for a new card', function (): void {
+    $scheduler = new App\Fsrs\Scheduler(
+        new App\Fsrs\SchedulerConfig(rolloverHour: 4, timezone: 'UTC', enableFuzzing: false),
+        $this->fsrs,
+    );
+
+    foreach ($this->vectors['new_card_transitions']['cases'] as $case) {
+        $out = $scheduler->review(App\Fsrs\CardSnapshot::new(), Rating::from($case['rating']), new DateTimeImmutable('2026-01-01T10:00:00Z'));
+
+        expect($out->state->value)->toBe($case['state'], "rating {$case['rating']}")
+            ->and($out->step)->toBe($case['step'], "rating {$case['rating']}")
+            ->and($out->scheduledSeconds)->toBe($case['seconds'], "rating {$case['rating']}");
+    }
+});
+
 it('matches the fixture day-difference cases across timezones and DST', function (): void {
     foreach ($this->vectors['day_difference']['cases'] as $case) {
         $scheduler = new App\Fsrs\Scheduler(

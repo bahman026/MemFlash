@@ -103,5 +103,15 @@
       { "description": "14 calendar days apart, spanning the 2026 US spring-forward transition -- DST must not perturb the day count", "timezone": "America/New_York", "from": "2026-03-01T12:00:00Z", "to": "2026-03-15T12:00:00Z", "days": 14 },
       { "description": "reversed order gives a negative count", "timezone": "UTC", "from": "2026-01-11T10:00:00Z", "to": "2026-01-01T10:00:00Z", "days": -10 }
     ]
+  },
+
+  "new_card_transitions": {
+    "_comment": "First rating on a brand-new card, default steps [60, 600], fuzz off. The card enters Learning at step 0 and the rating is applied to the steps, as py-fsrs does. Before 2026-09-29 both implementations returned Learning step 0 in 60s for every rating.",
+    "cases": [
+      { "rating": 1, "state": "learning", "step": 0, "seconds": 60 },
+      { "rating": 2, "state": "learning", "step": 0, "seconds": 330 },
+      { "rating": 3, "state": "learning", "step": 1, "seconds": 600 },
+      { "rating": 4, "state": "review", "step": null, "seconds": 691200 }
+    ]
   }
 }

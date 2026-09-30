@@ -77,7 +77,11 @@ final class Scheduler
             $priorStability = max(Parameters::S_MIN, (float) $card->stability);
             $priorDifficulty = min(Parameters::D_MAX, max(Parameters::D_MIN, (float) $card->difficulty));
 
-            $elapsedDays = $this->dayDifference($card->lastReview, $now);
+            // Never negative. A review timestamped before the card's last review
+            // (a stale offline replay, a device clock running behind) would
+            // otherwise give R > 1, or NaN once the curve's base goes negative,
+            // and that NaN is written to the log and carried forward.
+            $elapsedDays = max(0, $this->dayDifference($card->lastReview, $now));
             $retrievability = $this->fsrs->retrievability((float) $elapsedDays, $priorStability);
         }
 
@@ -181,12 +185,13 @@ final class Scheduler
         ];
 
         // --- From New ---
+        // A new card enters Learning at step 0, and its first rating then moves it
+        // along the steps like any learning answer: Easy graduates at once, Good
+        // goes to the next step, Hard waits between the first two. This is the
+        // reference behaviour (py-fsrs). Returning step 0 for every rating made the
+        // first answer meaningless and labelled all four buttons "1m".
         if ($card->isNew()) {
-            if ($this->config->learningSteps === []) {
-                return $graduate();
-            }
-
-            return [CardState::Learning, 0, $this->config->learningSteps[0]];
+            return $this->stepTransition(CardState::Learning, 0, $this->config->learningSteps, $rating, $graduate);
         }
 
         // --- From Review ---
@@ -199,18 +204,33 @@ final class Scheduler
         }
 
         // --- From Learning or Relearning ---
-        $steps = $this->config->stepsFor($card->state);
-        $step = $card->step ?? 0;
+        return $this->stepTransition(
+            $card->state,
+            $card->step ?? 0,
+            $this->config->stepsFor($card->state),
+            $rating,
+            $graduate,
+        );
+    }
 
+    /**
+     * One answer on a learning or relearning step.
+     *
+     * @param  list<int>  $steps  seconds per step
+     * @param  \Closure(): array{0: CardState, 1: int|null, 2: int}  $graduate
+     * @return array{0: CardState, 1: int|null, 2: int}
+     */
+    private function stepTransition(CardState $state, int $step, array $steps, Rating $rating, \Closure $graduate): array
+    {
         if ($steps === [] || $step >= count($steps)) {
             return $graduate();
         }
 
         return match ($rating) {
-            Rating::Again => [$card->state, 0, $steps[0]],
+            Rating::Again => [$state, 0, $steps[0]],
 
             Rating::Hard => [
-                $card->state,
+                $state,
                 $step,
                 match (true) {
                     $step === 0 && count($steps) === 1 => (int) round($steps[0] * 1.5),
@@ -221,7 +241,7 @@ final class Scheduler
 
             Rating::Good => $step + 1 >= count($steps)
                 ? $graduate()
-                : [$card->state, $step + 1, $steps[$step + 1]],
+                : [$state, $step + 1, $steps[$step + 1]],
 
             Rating::Easy => $graduate(),
         };

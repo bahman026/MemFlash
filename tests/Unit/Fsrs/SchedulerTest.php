@@ -37,8 +37,8 @@ function at(string $iso): DateTimeImmutable
 // New -> Learning
 // -------------------------------------------------------------------------
 
-it('sends a new card into learning on the first step', function (): void {
-    $out = scheduler()->review(CardSnapshot::new(), Rating::Good, at('2026-01-01 10:00:00'));
+it('records a new card entering learning with its first review', function (): void {
+    $out = scheduler()->review(CardSnapshot::new(), Rating::Again, at('2026-01-01 10:00:00'));
 
     expect($out->state)->toBe(CardState::Learning)
         ->and($out->step)->toBe(0)
@@ -46,9 +46,24 @@ it('sends a new card into learning on the first step', function (): void {
         ->and($out->stateBefore)->toBe(CardState::New)
         ->and($out->elapsedDays)->toBe(0)
         ->and($out->retrievabilityBefore)->toBe(1.0)
-        ->and($out->reps)->toBe(1)
-        ->and($out->lapses)->toBe(0);
+        ->and($out->reps)->toBe(1);
 });
+
+// The first rating on a new card moves it along the learning steps exactly as it
+// would from step 0 (py-fsrs). It used to be ignored: every rating gave step 0
+// in 60 seconds, so Easy on a word you already knew still asked again in a minute.
+it('applies the first rating on a new card to the learning steps', function (Rating $rating, CardState $state, ?int $step, int $seconds): void {
+    $out = scheduler()->review(CardSnapshot::new(), $rating, at('2026-01-01 10:00:00'));
+
+    expect($out->state)->toBe($state)
+        ->and($out->step)->toBe($step)
+        ->and($out->scheduledSeconds)->toBe($seconds);
+})->with([
+    'again' => [Rating::Again, CardState::Learning, 0, 60],
+    'hard' => [Rating::Hard, CardState::Learning, 0, 330],   // (60 + 600) / 2
+    'good' => [Rating::Good, CardState::Learning, 1, 600],
+    'easy' => [Rating::Easy, CardState::Review, null, 8 * 86400], // S0(Easy) = 8.2956
+]);
 
 it('graduates a new card straight to review when there are no learning steps', function (): void {
     $out = scheduler(['learningSteps' => []])->review(CardSnapshot::new(), Rating::Good, at('2026-01-01 10:00:00'));
