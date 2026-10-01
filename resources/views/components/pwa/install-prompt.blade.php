@@ -15,12 +15,23 @@
         <img src="{{ asset('icons/icon-192.png') }}" alt="" class="pwa-install__icon" width="48" height="48">
         <div class="pwa-install__body">
             <p id="pwa-install-title" class="pwa-install__title">Install MemFlash</p>
-            <p class="pwa-install__text" data-pwa-mode="ios" hidden>
-                Tap
-                <svg class="pwa-install__share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Share">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0-12L8 7m4-4l4 4M6 11H5a1 1 0 00-1 1v8a1 1 0 001 1h14a1 1 0 001-1v-8a1 1 0 00-1-1h-1"/>
-                </svg>
-                <strong>Share</strong>, then <strong>Add to Home Screen</strong> to study like an app, even offline.
+            <div class="pwa-install__text" data-pwa-mode="ios" hidden>
+                <p class="pwa-install__lead">Add it to your Home Screen to study like an app, even offline:</p>
+                <ol class="pwa-install__steps">
+                    <li>
+                        Tap
+                        <svg class="pwa-install__share" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="Share">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0-12L8 7m4-4l4 4M6 11H5a1 1 0 00-1 1v8a1 1 0 001 1h14a1 1 0 001-1v-8a1 1 0 00-1-1h-1"/>
+                        </svg>
+                        <strong>Share</strong> in the browser bar.
+                    </li>
+                    <li>Choose <strong>Add to Home Screen</strong> (under <strong>View More</strong> if you do not see it).</li>
+                    <li>Tap <strong>Add</strong>.</li>
+                </ol>
+            </div>
+            <p class="pwa-install__text" data-pwa-mode="inapp" hidden>
+                This browser inside another app cannot add MemFlash to your Home Screen. Open
+                <strong>memflash.ir</strong> in <strong>Safari</strong>, then tap Share and <strong>Add to Home Screen</strong>.
             </p>
             <p class="pwa-install__text" data-pwa-mode="prompt" hidden>
                 Add it to your home screen to study like an app, even offline.
@@ -57,6 +68,9 @@
     .pwa-install__text { margin: 2px 0 0; font-size: 14px; line-height: 1.45; color: #4b5563; }
     .pwa-install__text strong { color: #111827; font-weight: 600; }
     .pwa-install__share { display: inline-block; width: 18px; height: 18px; vertical-align: -3px; color: #2563eb; }
+    .pwa-install__lead { margin: 0 0 4px; }
+    .pwa-install__steps { margin: 0; padding-left: 1.2rem; list-style: decimal; }
+    .pwa-install__steps li { margin: 2px 0; }
     .pwa-install__actions { display: flex; gap: 8px; margin-top: 12px; }
     .pwa-install__actions button {
         min-height: 40px;
@@ -104,8 +118,12 @@
         const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
             || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
+        // Facebook, Instagram, LINE, WeChat and X open links in their own browser,
+        // which has no Add to Home Screen; the steps would not work there.
+        const inApp = /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Twitter/i.test(navigator.userAgent);
+
         if (ios) {
-            setTimeout(() => show('ios'), 1500);
+            setTimeout(() => show(inApp ? 'inapp' : 'ios'), 1500);
             return;
         }
 

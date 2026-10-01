@@ -4,11 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="canonical" href="{{ url()->current() }}">
-    <link rel="icon" href="{{ asset('flash-cards.svg') }}" type="image/svg+xml">
-    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
     <x-pwa.head />
 
-    <title>Login - MemFlash</title>
+    <title>MemFlash – Sign in</title>
     <meta name="description" content="Login to MemFlash and start your learning journey with intelligent flashcards">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -149,5 +147,9 @@
     <div class="fixed top-10 left-10 w-20 h-20 bg-blue-100 rounded-full opacity-20 animate-bounce"></div>
     <div class="fixed bottom-10 right-10 w-16 h-16 bg-purple-100 rounded-full opacity-20 animate-bounce" style="animation-delay: 1s;"></div>
     <div class="fixed top-1/2 right-20 w-12 h-12 bg-indigo-100 rounded-full opacity-20 animate-bounce" style="animation-delay: 2s;"></div>
+
+    {{-- Most iPhone visitors arrive here: suggest the home-screen app before sign-in,
+         so they sign in once, inside it. --}}
+    <x-pwa.install-prompt />
 </body>
 </html>

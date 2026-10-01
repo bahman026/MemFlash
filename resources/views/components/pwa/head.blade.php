@@ -6,6 +6,10 @@
     ignores SVG there, so it has to be a PNG), and apple-mobile-web-app-capable is
     what opens the saved app full screen rather than as a Safari tab.
 --}}
+{{-- Favicons as PNG and ICO. iOS cannot use an SVG favicon, and favicon.ico used
+     to be the SVG logo renamed, so bookmarks and the share sheet showed no icon. --}}
+<link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+<link rel="icon" href="{{ asset('icons/favicon-32.png') }}" type="image/png" sizes="32x32">
 <link rel="manifest" href="{{ asset('manifest.json') }}">
 <meta name="theme-color" content="#2563eb">
 <meta name="application-name" content="MemFlash">

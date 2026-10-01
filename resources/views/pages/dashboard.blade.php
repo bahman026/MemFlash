@@ -1,6 +1,6 @@
 <x-layouts.dashboard>
     <x-slot name="seo">
-        <title>Dashboard - MemFlash</title>
+        <title>MemFlash</title>
         <meta name="description" content="Your personal flashcard dashboard">
         {{-- Read by resources/js/app.js: the study scripts the service worker keeps
              next to the study pages, versioned exactly as the pages load them. --}}
