@@ -36,7 +36,7 @@ it('gives iOS an icon and a short name on the pages people save', function (stri
     expect($html)
         ->toContain('rel="apple-touch-icon"')
         ->toContain('<meta name="apple-mobile-web-app-title" content="MemFlash">')
-        ->toContain('rel="icon" href="' . asset('favicon.ico') . '"')
+        ->toContain('rel="icon" href="' . asset('favicon.ico') . '?v=')
         ->toContain('id="pwa-install"')
         // Bookmarks and shares take the page title.
         ->toMatch('#<title>MemFlash[^<]{0,30}</title>#u')
