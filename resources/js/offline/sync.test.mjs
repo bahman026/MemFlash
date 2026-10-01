@@ -119,7 +119,7 @@ test('studies offline, keeps the answer on the device, and syncs it later', asyn
         const [entry] = JSON.parse(options.body).reviews;
         return [200, {
             synced_at: '2026-09-30T09:00:00+00:00',
-            applied: [{ client_uuid: entry.client_uuid, type: 'card', card_id: 1, state: 'learning', step: 1, stability: 2.3065, difficulty: 2.1181, due: '2026-09-30T09:10:00+00:00', last_review: entry.reviewed_at, reps: 1, lapses: 0 }],
+            applied: [{ client_uuid: entry.client_uuid, type: 'card', card_id: 1, state: 'learning', step: 1, stability: 2.3065, difficulty: 2.1181, due: new Date(Date.now() + 10 * 60_000).toISOString(), last_review: entry.reviewed_at, reps: 1, lapses: 0 }],
             rejected: [],
         }];
     });
@@ -137,7 +137,7 @@ test('studies offline, keeps the answer on the device, and syncs it later', asyn
     // ...and the server's state replaces the local one.
     assert.equal((await MemFlash.status()).pending, 0);
     const [stored] = (await MemFlash.dueQueue('card', 1)).filter((c) => c.id === 1);
-    assert.equal(stored, undefined); // learning until 09:10, not due now
+    assert.equal(stored, undefined); // learning for another 10 minutes, not due now
 });
 
 test('keeps the answer queued when the sync fails', async () => {
