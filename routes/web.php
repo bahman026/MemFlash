@@ -10,6 +10,7 @@ use App\Http\Controllers\DeckController;
 use App\Http\Controllers\LevelSelectionController;
 use App\Http\Controllers\StaticDeckController;
 use App\Http\Controllers\StudyController;
+use App\Http\Controllers\WordListController;
 use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -98,4 +99,14 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::get('/api/sync/bootstrap', [SyncController::class, 'bootstrap'])->name('sync.bootstrap');
     Route::post('/api/sync', [SyncController::class, 'sync'])->name('sync.push');
     Route::get('/api/sync/status', [SyncController::class, 'status'])->name('sync.status');
+
+    // Word lookup and word lists. A list is a deck and a saved word a card, so
+    // these only look words up and choose where they go. The lookup calls
+    // outside services, hence the throttle. /lookup?q=%%SS opens a word from
+    // another app, the way translate.google.com/?text=%%SS does.
+    Route::get('/lookup', [WordListController::class, 'page'])->name('words.page');
+    Route::get('/api/words/lookup', [WordListController::class, 'lookup'])->middleware('throttle:30,1')->name('words.lookup');
+    Route::post('/api/word-lists', [WordListController::class, 'store'])->name('word-lists.store');
+    Route::put('/api/word-lists/selected', [WordListController::class, 'select'])->name('word-lists.select');
+    Route::post('/api/word-lists/words', [WordListController::class, 'addWord'])->name('word-lists.add-word');
 });

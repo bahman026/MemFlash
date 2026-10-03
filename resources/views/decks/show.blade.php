@@ -147,7 +147,10 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <p class="text-sm font-medium text-gray-900 mb-1">Front</p>
-                                            <p class="text-gray-700">{{ $card->front }}</p>
+                                            <p class="text-gray-700">
+                                                {{ $card->front }}
+                                                <a href="{{ route('words.page', ['q' => $card->front]) }}" class="ml-1 text-xs font-medium text-primary-600 hover:text-primary-800 whitespace-nowrap" title="Look this word up in MemFlash">Look up</a>
+                                            </p>
                                         </div>
                                         <div>
                                             <p class="text-sm font-medium text-gray-900 mb-1">Back</p>

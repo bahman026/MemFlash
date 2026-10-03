@@ -20,6 +20,11 @@
                 <h3 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate leading-tight mb-1">
                     {{ $deck->name }}
                 </h3>
+                @if($deck->is_default_list)
+                    <span class="inline-flex items-center mb-2 px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold" title="Looked-up words go here unless you pick another list">
+                        Default word list
+                    </span>
+                @endif
                 <div class="flex items-center space-x-3 text-sm text-gray-500">
                     <span class="flex items-center">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

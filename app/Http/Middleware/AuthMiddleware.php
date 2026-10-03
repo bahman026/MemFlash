@@ -12,9 +12,11 @@ class AuthMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        // If user is not authenticated, redirect to login
+        // guest() rather than route(): it remembers the page asked for, so
+        // signing in returns there. That matters for /lookup?q=word opened from
+        // another app, which would otherwise lose the word to the dashboard.
         if (! Auth::check()) {
-            return redirect()->route('login.page');
+            return redirect()->guest(route('login.page'));
         }
 
         // Blocking takes effect on the next request, including for a user still

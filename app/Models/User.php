@@ -121,6 +121,27 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * One setting from the `preferences` JSON column, or $default when it was
+     * never set.
+     */
+    public function preference(string $key, mixed $default = null): mixed
+    {
+        $preferences = $this->preferences ?? [];
+
+        return array_key_exists($key, $preferences) ? $preferences[$key] : $default;
+    }
+
+    /**
+     * Saves one setting, keeping the others. The array cast cannot write a
+     * nested key in place, so the whole array is reassigned.
+     */
+    public function setPreference(string $key, mixed $value): void
+    {
+        $this->preferences = [...($this->preferences ?? []), $key => $value];
+        $this->save();
+    }
+
+    /**
      * Get the decks for the user.
      *
      * @return HasMany<Deck, $this>

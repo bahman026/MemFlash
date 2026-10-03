@@ -14,6 +14,12 @@
         <!-- Welcome Section -->
         <x-layouts.sections.welcome-section :user="auth()->user()" />
 
+        <!-- Word Lookup: look a word up, save it to a list -->
+        <x-ui.word-lookup
+            :lists="$lists"
+            :selected-list-id="$selectedListId"
+        />
+
         <!-- Stats Cards -->
         <x-ui.feedback.dashboard-stats 
             :decks="$decks" 

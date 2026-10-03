@@ -7,7 +7,7 @@
 <div class="{{ $class }}">
     <div class="px-3 py-4 sm:px-4 sm:py-5 lg:px-6 lg:py-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
-            <h2 class="text-lg sm:text-xl font-bold text-gray-900">Your Personal Decks</h2>
+            <h2 class="text-lg sm:text-xl font-bold text-gray-900">Your Decks &amp; Word Lists</h2>
             @if($user->hasReachedDeckLimit())
                 <button disabled class="bg-gray-400 text-white px-4 py-2.5 rounded-lg text-sm font-semibold w-full sm:w-auto cursor-not-allowed opacity-75">
                     + Create New Deck (Limit Reached)

@@ -21,10 +21,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $name
  * @property positive-int $user_id
  * @property bool $is_public
+ * @property bool $is_default_list
  * @property positive-int $new_cards_per_day
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Card> $cards
+ * @property-read int|null $cards_count  only when loaded with withCount('cards')
  * @property-read User $user
  */
 class Deck extends Model
@@ -32,10 +34,25 @@ class Deck extends Model
     /** @use HasFactory<DeckFactory> */
     use HasFactory;
 
+    /**
+     * Model-level defaults, not just database defaults.
+     *
+     * A deck created without them (a word list made from the lookup's list
+     * picker, for one) would otherwise hold nulls in memory until refreshed.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'is_public' => false,
+        'is_default_list' => false,
+        'new_cards_per_day' => 10,
+    ];
+
     protected $fillable = [
         'name',
         'user_id',
         'is_public',
+        'is_default_list',
         'new_cards_per_day',
     ];
 
@@ -43,6 +60,7 @@ class Deck extends Model
     {
         return [
             'is_public' => 'boolean',
+            'is_default_list' => 'boolean',
             'new_cards_per_day' => 'integer',
         ];
     }

@@ -8,11 +8,12 @@ use App\Models\Deck;
 use App\Models\StaticDeck;
 use App\Models\UserStaticDeckProgress;
 use App\Models\UserStaticDeckSetting;
+use App\Services\WordListService;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
-    public function index(): \Illuminate\Contracts\View\Factory | \Illuminate\Contracts\View\View
+    public function index(WordListService $wordLists): \Illuminate\Contracts\View\Factory | \Illuminate\Contracts\View\View
     {
         $user = Auth::user();
 
@@ -84,6 +85,18 @@ class DashboardController extends Controller
 
         $cardsToday = 0;
 
-        return view('pages.dashboard', compact('decks', 'staticDecks', 'totalCards', 'totalStaticCards', 'cardsToday'));
+        // The word lookup's list picker: every deck takes words.
+        $lists = $wordLists->pickerLists($decks);
+        $selectedListId = $wordLists->selectedListIdFor($user);
+
+        return view('pages.dashboard', compact(
+            'decks',
+            'staticDecks',
+            'totalCards',
+            'totalStaticCards',
+            'cardsToday',
+            'lists',
+            'selectedListId',
+        ));
     }
 }

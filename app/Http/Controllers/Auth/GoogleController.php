@@ -55,12 +55,14 @@ class GoogleController extends Controller
 
             Auth::login($user, true); // true for "remember me"
 
-            // Redirect new users to level selection, existing users to dashboard
+            // Redirect new users to level selection, existing users back to the
+            // page that sent them to sign in (AuthMiddleware remembers it), else
+            // the dashboard.
             if ($isNewUser) {
                 return redirect()->route('level.selection');
             }
 
-            return redirect()->route('dashboard');
+            return redirect()->intended(route('dashboard'));
         } catch (\Exception $e) {
             Log::error('Google OAuth Error: ' . $e->getMessage());
 

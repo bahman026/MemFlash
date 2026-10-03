@@ -80,6 +80,34 @@ setting them had no effect). Recreate the container to apply a change:
 | `DB_WAIT_TIMEOUT` | `60` | Seconds to wait for the database |
 | `DB_FRESH_ON_BOOT` | `false` | ⚠️ **`true` destroys all data.** Not passed by `docker-compose.yml`, so a value in `.env` is ignored. To rebuild a local database use `docker compose exec app php artisan migrate:fresh --seed --force` |
 
+### Word lookup
+
+The dashboard's "Look up a word" (also on its own page, `/lookup?q=word&sl=en&tl=fa`,
+for linking words in from other apps) calls outside services. Everything works with no
+configuration and no keys; these only change which services answer. They are
+ordinary Laravel settings (`config/services.php` → `word_lookup`), read from the
+mounted `.env`, so with `CACHE_CONFIG=true` restart the `app` container to apply
+a change.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `WORD_LOOKUP_DEFINITIONS` | `wiktionary,datamuse` | English definitions, asked in order until one answers. Empty turns definitions off |
+| `WORD_LOOKUP_TRANSLATORS` | `google,mymemory` | English ↔ Persian, asked in order. Empty turns translation off |
+| `GOOGLE_TRANSLATE_KEY` | — | Google Cloud Translation API key. Until it is set, `google` is skipped |
+| `MYMEMORY_EMAIL` | — | Raises MyMemory's free quota from 5,000 to 50,000 characters a day |
+| `WORD_LOOKUP_TIMEOUT` | `5` | Seconds per request to a service |
+| `WORD_LOOKUP_CACHE_DAYS` | `30` | How long a complete answer is reused. Partial answers are retried after 10 minutes |
+
+**MyMemory's quota is per server IP**, shared by every user: without a key or an
+email, a busy day can exhaust it, and translations then come back empty (the
+lookup still works; users type the meaning themselves). Set `MYMEMORY_EMAIL`, or
+a `GOOGLE_TRANSLATE_KEY`, which also translates better. The keyless endpoint that
+the Google Translate *page* uses is deliberately not used: it answers server
+traffic with a captcha.
+
+A failing service is logged (`Word lookup provider failed`) and the next one is
+asked; an unknown name in either list is an error, so a typo shows up in the log.
+
 ### Scaling web separately from workers
 
 Running everything in one container is the trade for zero manual management. To

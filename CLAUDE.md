@@ -306,6 +306,60 @@ Gradients are **numerical** (central differences), not analytic — slower, but 
 derivation is where hand-written optimizers go quietly wrong. A fit that does not
 beat the defaults is discarded. See `docs/DEPLOYMENT.md` for the worker and cron setup.
 
+### Word lookup and word lists (since 2026-10-03)
+
+The dashboard's "Look up a word" panel (`x-ui.word-lookup`, Alpine) looks a word
+up and saves it to a list. It is deliberately compact: no card form, the card is
+the translation chip and meaning the user taps (one input appears only when a
+lookup leaves a side empty).
+
+`/lookup?q=word` is the same panel on its own page, opened on that word, so
+another app (the user's subtitle reader) links a word in with
+`https://<host>/lookup?q=%%SS&sl=en&tl=fa`. It takes Google Translate's parameters:
+`sl`/`tl` fix the direction (`Direction::fromQuery()`; none or `sl=auto` detects),
+and `text=` works as `q=`. The page keeps the address bar in step with
+the direction switch. For links from other apps, `AuthMiddleware` uses
+`redirect()->guest()` and the Google callback `redirect()->intended()`, so a
+signed-out user lands back on the word. Each word on a list's page links to it.
+There is no link out to Google Translate or any other site; the user removed it.
+
+**A list is a deck and a saved word is a card.** There is no list table: lists are
+studied, scheduled, exported and synced offline with no code of their own, and
+every deck the user owns can be picked as a list. Don't build a parallel model.
+
+- `decks.is_default_list` marks the one deck words go into before the user picks
+  another. A Postgres **partial unique index** (`decks_one_default_list_per_user`)
+  allows one per user, which makes `WordListService::defaultListFor()`'s
+  `firstOrCreate` race-safe. It is created on first use ("My Words"), never just
+  by showing the dashboard; deleting it is allowed and the next save recreates it.
+- The list picked last is `users.preferences.word_list_id` (JSON, no FK); a stale
+  or foreign id falls back to the default list. `POST /api/word-lists/words` takes
+  `list_id` = an id, `"default"`, or nothing (= the remembered list). The browser
+  always sends an id or `"default"`: the picker remembers a pick in a separate
+  request, and a save with no `list_id` could overtake it.
+- Ownership is `DeckPolicy::update`, the same as adding a card by hand.
+
+**Providers are configuration.** `App\Services\WordLookup\WordLookupService` asks
+ordered provider lists from `config/services.php` → `word_lookup` (env-driven, see
+`docs/DEPLOYMENT.md`): `DefinitionProvider`s (Wiktionary, Datamuse) for English
+meanings, `TranslationProvider`s (Google Cloud with a key, MyMemory without) for
+English ↔ Persian. First answer wins; a throwing provider is logged and skipped.
+
+A lookup has a `Direction`: `en-fa` (meanings + Persian), `fa-en` (an English word
+only), or `en-en` (an English dictionary: meanings only, no translator is called,
+and the chosen meaning is the card's **back**, its example the note). Without one
+it is detected by script (`\p{Arabic}` → `fa-en`, else `en-fa`). What picking a
+meaning puts on the card is decided server-side per sense
+(`LookupResult::senseCard()`, sent as `senses[i].back`/`.note`); the browser only
+applies it, so keep that logic out of the JS. Results are cached per direction,
+30 days when complete, 10 minutes when a part is missing (quota/outage, not
+"unknown word"); bump the key version (`word-lookup:vN:`) whenever
+`LookupResult::toArray()` changes shape.
+
+`Text::clean()` normalizes Arabic ي/ك to Persian ی/ک and strips translation-memory
+punctuation; it uses `/u` regexes, **never `trim()` with a character list**, whose
+bytes overlap Persian letters.
+
 ### Levels
 
 `UserLevelEnum` (`starter`, `elementary`, `pre_intermediate`, `intermediate`, `upper_intermediate`,
@@ -360,7 +414,8 @@ Auth is `App\Http\Middleware\AuthMiddleware` applied **by FQCN** in route groups
 actually applied through `AdminPanelProvider::authMiddleware()`.
 
 No Form Requests (validation is inline in controllers), no Actions. Services:
-`ReviewService`, `DeckFileProcessor`, `DeckCsvExportService`.
+`ReviewService`, `DeckFileProcessor`, `DeckCsvExportService`, `WordListService`,
+and `WordLookup\WordLookupService` with its providers.
 
 **Queues** use the `database` driver — nothing extra to install. One job so far,
 `OptimizeFsrsParameters`. Reviews are scheduled **synchronously** in the request, so
