@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\GoogleTranslateSyncController;
 use App\Http\Controllers\LevelSelectionController;
 use App\Http\Controllers\StaticDeckController;
 use App\Http\Controllers\StudyController;
@@ -109,4 +110,10 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     Route::post('/api/word-lists', [WordListController::class, 'store'])->name('word-lists.store');
     Route::put('/api/word-lists/selected', [WordListController::class, 'select'])->name('word-lists.select');
     Route::post('/api/word-lists/words', [WordListController::class, 'addWord'])->name('word-lists.add-word');
+
+    // Words saved in Google Translate, read from the Google Sheet its Saved
+    // page exports to. Each sync fetches the sheet, hence the throttle.
+    Route::put('/word-lists/google-translate', [GoogleTranslateSyncController::class, 'connect'])->middleware('throttle:10,1')->name('google-translate.connect');
+    Route::post('/word-lists/google-translate/sync', [GoogleTranslateSyncController::class, 'sync'])->middleware('throttle:10,1')->name('google-translate.sync');
+    Route::delete('/word-lists/google-translate', [GoogleTranslateSyncController::class, 'disconnect'])->name('google-translate.disconnect');
 });

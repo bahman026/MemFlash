@@ -35,6 +35,15 @@ Schedule::command('fsrs:optimize')
     ->runInBackground()
     ->description('Fit FSRS parameters to logged review history');
 
+// Bring in words saved in Google Translate since yesterday, for everyone who
+// linked the sheet they export to. One small CSV per user; "Sync now" on the
+// dashboard does the same on demand.
+Schedule::command('words:sync-google-translate')
+    ->dailyAt('04:30')
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->description('Sync words saved in Google Translate into word lists');
+
 // Trim expired queue batch records so the table does not grow without bound.
 Schedule::command('queue:prune-batches --hours=48')
     ->daily()

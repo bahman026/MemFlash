@@ -14,6 +14,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -33,6 +34,7 @@ use Illuminate\Notifications\Notifiable;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Collection<int, Deck> $decks
+ * @property-read GoogleTranslateSync|null $googleTranslateSync
  * @property-read Collection<int, UserStaticDeckProgress> $staticDeckProgress
  */
 class User extends Authenticatable implements FilamentUser
@@ -149,6 +151,16 @@ class User extends Authenticatable implements FilamentUser
     public function decks(): HasMany
     {
         return $this->hasMany(Deck::class);
+    }
+
+    /**
+     * The Google Sheet of Google Translate saved words, if one is linked.
+     *
+     * @return HasOne<GoogleTranslateSync, $this>
+     */
+    public function googleTranslateSync(): HasOne
+    {
+        return $this->hasOne(GoogleTranslateSync::class);
     }
 
     /**

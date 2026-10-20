@@ -88,6 +88,7 @@ class DashboardController extends Controller
         // The word lookup's list picker: every deck takes words.
         $lists = $wordLists->pickerLists($decks);
         $selectedListId = $wordLists->selectedListIdFor($user);
+        $googleTranslateSync = $user->googleTranslateSync()->with('deck')->first();
 
         return view('pages.dashboard', compact(
             'decks',
@@ -97,6 +98,7 @@ class DashboardController extends Controller
             'cardsToday',
             'lists',
             'selectedListId',
+            'googleTranslateSync',
         ));
     }
 }

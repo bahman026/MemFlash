@@ -20,6 +20,12 @@
             :selected-list-id="$selectedListId"
         />
 
+        <!-- Google Translate: words saved there, synced into a list -->
+        <x-ui.google-translate-sync
+            :sync="$googleTranslateSync"
+            :lists="$lists"
+        />
+
         <!-- Stats Cards -->
         <x-ui.feedback.dashboard-stats 
             :decks="$decks" 

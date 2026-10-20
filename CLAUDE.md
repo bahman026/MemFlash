@@ -360,6 +360,24 @@ applies it, so keep that logic out of the JS. Results are cached per direction,
 punctuation; it uses `/u` regexes, **never `trim()` with a character list**, whose
 bytes overlap Persian letters.
 
+### Google Translate saved words (since 2026-10-20)
+
+Google Translate has **no API** for its saved words; its Saved page can only
+"Export to Google Sheets". The dashboard section (`x-ui.google-translate-sync`,
+plain forms, `GoogleTranslateSyncController`) takes that sheet's link, shared as
+"anyone with the link" or published, and `App\Services\GoogleTranslate\SavedWordsSync`
+reads it as CSV into a word list (one `google_translate_syncs` row per user,
+`deck_id` null = the default list). `words:sync-google-translate` runs daily at 04:30.
+
+- `SheetLink` rebuilds the CSV URL from the sheet id only, so a pasted link can
+  only fetch from `docs.google.com`. A private sheet answers 200 with Google's
+  sign-in HTML, which is detected by content type.
+- A row's words are its **last two cells** (the export's first two are language
+  names in the user's UI language, possibly Persian script). Front/back are
+  decided by script; the English side must contain a Latin letter.
+- Sync only adds. `imported_words` remembers every word brought in, so a card the
+  user deletes is not re-added; changing the sheet or the list resets it.
+
 ### Levels
 
 `UserLevelEnum` (`starter`, `elementary`, `pre_intermediate`, `intermediate`, `upper_intermediate`,
