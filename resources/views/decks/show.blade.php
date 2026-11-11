@@ -2,6 +2,9 @@
     <x-slot name="seo">
         <title>{{ $deck->name }} - MemFlash</title>
         <meta name="description" content="View and manage your flashcard deck">
+        @can('update', $deck)
+            <x-pwa.offline-deck type="card" :id="$deck->id" />
+        @endcan
     </x-slot>
 
     <div class="max-w-6xl mx-auto">

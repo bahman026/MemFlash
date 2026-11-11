@@ -5,6 +5,7 @@ import {
     bootstrapIfStale,
     dueQueue,
     hasDeck,
+    openDeck,
     preview,
     rate,
     refreshDeck,
@@ -34,12 +35,27 @@ if ('serviceWorker' in navigator && (window.isSecureContext || location.hostname
 // Push any queued reviews as soon as a connection is available.
 autoSync();
 
-// On the dashboard, keep every deck downloaded for offline study. The page lists
-// the study scripts to keep alongside the study pages themselves.
+// Keep decks on the device. A deck's page downloads that deck as it is opened, so
+// it opens and studies offline from then on; the dashboard downloads all of them.
+// Both list the study scripts to keep alongside the pages.
 const offlineAssets = document.querySelector('meta[name="memflash-offline-assets"]');
+const offlineDeck = document.querySelector('meta[name="memflash-offline-deck"]');
 if (offlineAssets && 'indexedDB' in window) {
     window.addEventListener('load', () => {
         const urls = offlineAssets.getAttribute('content').split(' ').filter(Boolean);
-        bootstrapIfStale(urls).catch((error) => console.warn('Offline download deferred:', error.message));
+        const [type, id] = offlineDeck?.getAttribute('content').split(':') ?? [];
+        const download = offlineDeck ? openDeck(type, Number(id), urls) : bootstrapIfStale(urls);
+        download.catch((error) => console.warn('Offline download deferred:', error.message));
     });
+}
+
+// Say so while offline: the page may be the copy kept on the device.
+const offlineNotice = document.querySelector('[data-offline-notice]');
+if (offlineNotice) {
+    const showOffline = () => {
+        offlineNotice.hidden = navigator.onLine;
+    };
+    window.addEventListener('online', showOffline);
+    window.addEventListener('offline', showOffline);
+    showOffline();
 }

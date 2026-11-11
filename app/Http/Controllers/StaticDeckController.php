@@ -69,11 +69,11 @@ class StaticDeckController extends Controller
         $user = $request->user();
         $cardsPerDay = $this->cardsPerDayFor($user, $staticDeck);
 
+        // Rendered even with nothing due: the screen then says the session is done.
+        // A redirect here could never be kept for offline use (the service worker
+        // refuses redirects), so a lesson with nothing due at download time would
+        // stay unavailable offline after its cards came due.
         $dueCards = $this->dueCardsFor($user, $staticDeck, $cardsPerDay);
-
-        if ($dueCards->isEmpty()) {
-            return redirect()->back()->with('info', 'All cards in this deck are up to date! Great job!');
-        }
 
         return view('static-decks.study', compact('staticDeck', 'dueCards', 'cardsPerDay'));
     }

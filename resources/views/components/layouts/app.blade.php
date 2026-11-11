@@ -59,6 +59,8 @@
         </x-slot>
     </x-layouts.sections.header>
 
+    <x-pwa.offline-notice />
+
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto py-3 sm:py-4 lg:py-6 px-3 sm:px-4 lg:px-6 xl:px-8">
         {{ $slot ?? '' }}

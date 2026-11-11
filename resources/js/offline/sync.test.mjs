@@ -81,7 +81,13 @@ test('downloads every deck and studies it with the daily new-card limit', async 
     const result = await MemFlash.bootstrap();
 
     assert.equal(result.cards, 5);
-    assert.deepEqual(result.studyUrls, ['/study/1', '/static-decks/9/study']);
+    assert.deepEqual(result.pageUrls, [
+        '/decks/1',
+        '/study/1',
+        '/static-decks/9',
+        '/static-decks/9/study',
+        '/static-decks/9/preview',
+    ]);
     assert.equal(calls[0].url, '/api/sync/bootstrap');
 
     // Limit 2, one new card already started today on the server: the due review
@@ -193,4 +199,92 @@ test('shares one request between overlapping syncs', async () => {
 
     assert.deepEqual(a, b);
     assert.equal(calls.filter((c) => c.url === '/api/sync').length, 1);
+});
+
+// ---------------------------------------------------------------------------
+// Opening a deck keeps it on the device
+// ---------------------------------------------------------------------------
+
+/** A service worker that records what it is asked to keep. */
+function fakeServiceWorker() {
+    const kept = [];
+    navigator.serviceWorker = {
+        ready: Promise.resolve({ active: { postMessage: (message) => kept.push(...message.urls) } }),
+    };
+    return kept;
+}
+
+test('opening a deck downloads it and keeps its pages for offline use', async () => {
+    const kept = fakeServiceWorker();
+    script.push([200, payload([personalDeck([newCard(1), newCard(2)])])]);
+
+    assert.deepEqual(await MemFlash.openDeck('card', 1, ['/js/study.js?v=1']), { found: true, cards: 2 });
+    assert.equal(calls[0].url, '/api/sync/bootstrap?deck=card:1');
+    assert.deepEqual(kept, ['/decks/1', '/study/1', '/js/study.js?v=1']);
+
+    // Now it opens with no connection.
+    navigator.onLine = false;
+    assert.deepEqual(await MemFlash.openDeck('card', 1), { skipped: 'offline' });
+    assert.equal(calls.length, 1);
+    assert.equal(await MemFlash.hasDeck('card', 1), true);
+    assert.deepEqual((await MemFlash.studyQueue('card', 1)).map((c) => c.id), [1]);
+
+    delete navigator.serviceWorker;
+});
+
+test('opening a lesson keeps its page, study page and preview', async () => {
+    const kept = fakeServiceWorker();
+    script.push([200, payload([], [lesson])]);
+
+    await MemFlash.openDeck('static_card', 9);
+    assert.deepEqual(kept, ['/static-decks/9', '/static-decks/9/study', '/static-decks/9/preview']);
+
+    delete navigator.serviceWorker;
+});
+
+test('opening a deck sends offline answers first, then refreshes it', async () => {
+    script.push([200, payload([personalDeck([newCard(1)])])]);
+    await MemFlash.bootstrap();
+    await MemFlash.rate((await MemFlash.studyQueue('card', 1))[0], 3);
+
+    const kept = fakeServiceWorker();
+    script.push((url, options) => {
+        const [review] = JSON.parse(options.body).reviews;
+        return [200, { synced_at: 'now', applied: [], rejected: [{ client_uuid: review.client_uuid, reason: 'superseded' }] }];
+    });
+    script.push([200, payload([personalDeck([newCard(1)])])]);
+
+    assert.equal((await MemFlash.openDeck('card', 1)).found, true);
+    assert.deepEqual(calls.map((c) => c.url), ['/api/sync/bootstrap', '/api/sync', '/api/sync/bootstrap?deck=card:1']);
+    assert.equal((await MemFlash.status()).pending, 0);
+    assert.deepEqual(kept, ['/decks/1', '/study/1']);
+
+    delete navigator.serviceWorker;
+});
+
+test('opening a deck never overwrites answers the server has not seen', async () => {
+    script.push([200, payload([personalDeck([newCard(1)])])]);
+    await MemFlash.bootstrap();
+    await MemFlash.rate((await MemFlash.studyQueue('card', 1))[0], 4);
+
+    const kept = fakeServiceWorker();
+    script.push([500, {}]); // the sync fails
+
+    assert.deepEqual(await MemFlash.openDeck('card', 1), { skipped: 'pending' });
+    assert.deepEqual(calls.map((c) => c.url), ['/api/sync/bootstrap', '/api/sync']);
+    assert.equal((await MemFlash.status()).pending, 1);
+    // The pages are still kept, so the deck opens offline.
+    assert.deepEqual(kept, ['/decks/1', '/study/1']);
+
+    delete navigator.serviceWorker;
+});
+
+test('opening someone else\'s public deck keeps nothing', async () => {
+    const kept = fakeServiceWorker();
+    script.push([404, {}]);
+
+    assert.deepEqual(await MemFlash.openDeck('card', 99), { found: false });
+    assert.deepEqual(kept, []);
+
+    delete navigator.serviceWorker;
 });

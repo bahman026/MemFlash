@@ -84,6 +84,16 @@ function uuid() {
 
 const deckKey = (type, deckId) => `${type}:${deckId}`;
 
+/**
+ * The pages a deck needs on the device to be opened and studied offline: its
+ * own page, its study page and (for a lesson) its card preview.
+ */
+export function deckPages(type, deckId) {
+    return type === 'static_card'
+        ? [`/static-decks/${deckId}`, `/static-decks/${deckId}/study`, `/static-decks/${deckId}/preview`]
+        : [`/decks/${deckId}`, `/study/${deckId}`];
+}
+
 /** Flatten a bootstrap payload into card rows, scheduler presets and deck records. */
 function readPayload(payload) {
     const cards = [];
@@ -150,9 +160,9 @@ export async function bootstrap() {
     return {
         cards: cards.length,
         decks: payload.decks.length + payload.static_decks.length,
-        studyUrls: [
-            ...payload.decks.map((d) => `/study/${d.id}`),
-            ...payload.static_decks.map((d) => `/static-decks/${d.id}/study`),
+        pageUrls: [
+            ...payload.decks.flatMap((d) => deckPages('card', d.id)),
+            ...payload.static_decks.flatMap((d) => deckPages('static_card', d.id)),
         ],
     };
 }
@@ -398,9 +408,36 @@ export async function bootstrapIfStale(extraUrls = [], maxAgeMs = 6 * 60 * 60 * 
     if (Number.isFinite(last) && Date.now() - last < maxAgeMs) return { skipped: 'fresh' };
 
     const result = await bootstrap();
-    await precache([...result.studyUrls, ...extraUrls]);
+    await precache([...result.pageUrls, ...extraUrls]);
 
     return result;
+}
+
+/**
+ * Keep one deck on the device, called when its page is opened.
+ *
+ * Online: push anything queued, re-download the deck (only with an empty queue,
+ * since a refresh replaces the device's copy) and keep its pages plus `assets`,
+ * the scripts those pages load. From then on the deck opens and studies with no
+ * connection. Offline it does nothing: the copy already on the device is used.
+ */
+export async function openDeck(type, deckId, assets = []) {
+    if (!navigator.onLine) return { skipped: 'offline' };
+
+    // A failed sync is not fatal: the answers stay queued, the refresh is skipped
+    // so they are not overwritten, and the pages are still kept.
+    await sync().catch((error) => console.warn('Sync deferred:', error.message));
+
+    let refreshed = { skipped: 'pending' };
+    if ((await queueSize()) === 0) {
+        refreshed = await refreshDeck(type, deckId);
+        // Someone else's public deck: the server keeps it online only.
+        if (!refreshed.found) return refreshed;
+    }
+
+    await precache([...deckPages(type, deckId), ...assets]);
+
+    return refreshed;
 }
 
 /** Sync on reconnect and on load. Safe to call more than once. */

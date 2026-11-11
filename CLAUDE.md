@@ -284,8 +284,16 @@ studies from the device through `window.MemFlash` whenever IndexedDB is availabl
 3. `rate()` schedules with the mirror, writes the card, and queues the raw rating durably;
    `sync()` then runs in the background. Nothing is lost offline, on reload or on close.
 4. The dashboard downloads every deck (`bootstrapIfStale`, at most every 6 h, only with an empty
-   queue) and asks the service worker to precache every study page plus the versioned study
+   queue) and asks the service worker to precache every deck's pages plus the versioned study
    scripts (listed in a `memflash-offline-assets` meta tag), so an unopened deck works offline.
+5. **Opening a deck's page downloads that deck** (since 2026-11-11). `decks.show` (owner only),
+   `static-decks.show` and `.preview` carry `<x-pwa.offline-deck>`, and `app.js` calls
+   `openDeck()`: sync, refresh this deck (empty queue only), and precache its pages
+   (`deckPages()` in `sync.js` is the one list). Offline, an amber `x-pwa.offline-notice` bar
+   says the page is the saved copy. Adding/editing cards still needs a connection.
+   `static-decks.study` therefore **renders with nothing due** instead of redirecting back: the
+   service worker never caches a redirect, so the old redirect left such lessons unstudiable
+   offline once their cards came due.
 
 Without IndexedDB, or for a deck the server will not hand over (someone else's public deck,
 `refreshDeck` → 404), the screen falls back to the direct endpoints (`/api/study/*` batch

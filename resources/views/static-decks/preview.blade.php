@@ -1,4 +1,8 @@
 <x-layouts.app>
+    <x-slot name="seo">
+        <x-pwa.offline-deck type="static_card" :id="$staticDeck->id" />
+    </x-slot>
+
     <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- Header -->
