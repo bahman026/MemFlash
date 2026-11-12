@@ -26,6 +26,20 @@ Route::get('/', function () {
 Route::view('/privacy', 'pages.privacy')->name('privacy');
 Route::view('/terms', 'pages.terms')->name('terms');
 
+// For search engines: the public pages only. Everything else needs a sign-in.
+// Linked from public/robots.txt.
+Route::get('/sitemap.xml', function () {
+    $urls = collect(['welcome', 'privacy', 'terms'])
+        ->map(fn (string $name): string => '  <url><loc>' . e(route($name)) . '</loc></url>')
+        ->implode("\n");
+
+    return response(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n{$urls}\n</urlset>\n",
+        200,
+        ['Content-Type' => 'application/xml; charset=UTF-8'],
+    );
+})->name('sitemap');
+
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 

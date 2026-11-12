@@ -48,3 +48,20 @@ it('gives link previews an image they can render', function (): void {
         ->assertOk()
         ->assertSee('<meta property="og:image" content="' . asset('icons/icon-512.png') . '">', false);
 });
+
+it('lists the public pages in the sitemap', function (): void {
+    $response = $this->get('/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
+
+    $xml = simplexml_load_string($response->getContent());
+    $locs = array_map(fn ($url): string => (string) $url->loc, iterator_to_array($xml->url, false));
+
+    expect($locs)->toBe([route('welcome'), route('privacy'), route('terms')]);
+
+    foreach ($locs as $loc) {
+        $this->get(parse_url($loc, PHP_URL_PATH) ?: '/')->assertOk();
+    }
+});
+
+it('points search engines at the sitemap', function (): void {
+    expect(file_get_contents(public_path('robots.txt')))->toContain('Sitemap: https://memflash.ir/sitemap.xml');
+});
