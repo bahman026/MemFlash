@@ -288,3 +288,32 @@ test('opening someone else\'s public deck keeps nothing', async () => {
 
     delete navigator.serviceWorker;
 });
+
+// ---------------------------------------------------------------------------
+// The word dictionary
+// ---------------------------------------------------------------------------
+
+test('downloads the dictionary once a day and answers lookups from it', async () => {
+    assert.equal(await MemFlash.lookUpOnDevice('win'), null);
+
+    script.push([200, { generated_at: 'now', entries: [['win', 'پیروز شدن، بردن', '/wɪn/', 0]] }]);
+    assert.deepEqual(await MemFlash.refreshDictionary(), { entries: 1 });
+    assert.equal(calls[0].url, '/api/words/dictionary');
+
+    assert.equal((await MemFlash.lookUpOnDevice('win')).card.back, 'پیروز شدن');
+    assert.deepEqual((await MemFlash.lookUpOnDevice('بردن')).translations, ['win']);
+
+    // Fresh: no second download until a day has passed, unless forced.
+    assert.deepEqual(await MemFlash.refreshDictionary(), { skipped: 'fresh' });
+    script.push([200, { generated_at: 'now', entries: [['win', 'برنده شدن', null, 1]] }]);
+    await MemFlash.refreshDictionary(0);
+    assert.equal((await MemFlash.lookUpOnDevice('win')).card.back, 'برنده شدن');
+
+    // A word saved to a list is answered at once, before the next download.
+    await MemFlash.rememberWord('ahead', 'جلوتر', null);
+    assert.equal((await MemFlash.lookUpOnDevice('ahead')).card.back, 'جلوتر');
+
+    navigator.onLine = false;
+    assert.deepEqual(await MemFlash.refreshDictionary(0), { skipped: 'offline' });
+    assert.equal(calls.length, 2);
+});

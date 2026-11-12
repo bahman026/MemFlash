@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Constants\DeckLimits;
+use App\Models\Card;
 use App\Models\Deck;
+use App\Models\StaticCard;
 use App\Services\WordListService;
 use App\Services\WordLookup\Direction;
 use App\Services\WordLookup\WordLookupService;
@@ -79,6 +81,40 @@ class WordListController extends Controller
         );
 
         return response()->json($result->toArray());
+    }
+
+    /**
+     * GET /api/words/dictionary
+     *
+     * Every word the device can answer a lookup from with no round trip: the
+     * whole curriculum (all levels, not just the user's) and the user's own
+     * cards, as [front, back, pronunciation, mine] rows. The browser keeps it
+     * in IndexedDB and refreshes it daily, so a known word is answered at once
+     * and the slow providers only add meanings afterwards.
+     */
+    public function dictionary(Request $request): JsonResponse
+    {
+        $row = fn (Card | StaticCard $card, int $mine): array => [
+            $card->front,
+            $card->back,
+            is_string($card->audio['pronunciation'] ?? null) ? trim($card->audio['pronunciation']) : null,
+            $mine,
+        ];
+
+        $own = Card::query()
+            ->whereIn('deck_id', $request->user()->decks()->select('id'))
+            ->get(['front', 'back', 'audio'])
+            ->map(fn (Card $card): array => $row($card, 1));
+
+        $lessons = StaticCard::query()
+            ->orderBy('id')
+            ->get(['front', 'back', 'audio'])
+            ->map(fn (StaticCard $card): array => $row($card, 0));
+
+        return response()->json([
+            'generated_at' => now()->toIso8601String(),
+            'entries' => $own->concat($lessons)->values(),
+        ]);
     }
 
     /**

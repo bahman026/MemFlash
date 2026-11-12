@@ -107,6 +107,7 @@ Route::middleware([AuthMiddleware::class])->group(function () {
     // another app, the way translate.google.com/?text=%%SS does.
     Route::get('/lookup', [WordListController::class, 'page'])->name('words.page');
     Route::get('/api/words/lookup', [WordListController::class, 'lookup'])->middleware('throttle:30,1')->name('words.lookup');
+    Route::get('/api/words/dictionary', [WordListController::class, 'dictionary'])->middleware('throttle:10,1')->name('words.dictionary');
     Route::post('/api/word-lists', [WordListController::class, 'store'])->name('word-lists.store');
     Route::put('/api/word-lists/selected', [WordListController::class, 'select'])->name('word-lists.select');
     Route::post('/api/word-lists/words', [WordListController::class, 'addWord'])->name('word-lists.add-word');

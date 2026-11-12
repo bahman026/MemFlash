@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Constants\DeckLimits;
 use App\Models\Card;
 use App\Models\Deck;
+use App\Models\StaticCard;
 use App\Models\User;
 use App\Services\WordListService;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -442,4 +443,25 @@ it('links every word in a list to its MemFlash lookup', function (): void {
         ->assertOk()
         ->assertSee('href="' . url('/lookup?q=look%20forward%20to') . '"', false)
         ->assertDontSee('translate.google.com');
+});
+
+it('hands the device every lesson word and only the user\'s own cards for instant lookups', function (): void {
+    StaticCard::factory()->withPronunciation('/wɪn/')->create(['front' => 'win', 'back' => 'پیروز شدن']);
+    $mine = Deck::factory()->for($this->user)->create();
+    Card::factory()->for($mine)->create(['front' => 'ahead', 'back' => 'پیش رو', 'audio' => ['pronunciation' => ' /əˈhɛd/ ']]);
+    Card::factory()->for(Deck::factory()->for(User::factory())->public())->create(['front' => 'secret', 'back' => 'راز']);
+
+    $entries = $this->actingAs($this->user)
+        ->getJson(route('words.dictionary'))
+        ->assertOk()
+        ->json('entries');
+
+    expect($entries)->toBe([
+        ['ahead', 'پیش رو', '/əˈhɛd/', 1],
+        ['win', 'پیروز شدن', '/wɪn/', 0],
+    ]);
+});
+
+it('keeps the dictionary behind sign-in', function (): void {
+    $this->getJson(route('words.dictionary'))->assertStatus(302);
 });

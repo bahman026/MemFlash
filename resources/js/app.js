@@ -5,10 +5,13 @@ import {
     bootstrapIfStale,
     dueQueue,
     hasDeck,
+    lookUpOnDevice,
     openDeck,
     preview,
     rate,
     refreshDeck,
+    refreshDictionary,
+    rememberWord,
     status,
     studyQueue,
     sync,
@@ -20,7 +23,21 @@ import { formatInterval } from './offline/queue.js';
  * being converted to modules. Keep it a thin surface: the logic lives in
  * offline/sync.js, offline/queue.js and fsrs/fsrs.js.
  */
-window.MemFlash = { bootstrap, refreshDeck, hasDeck, sync, status, dueQueue, studyQueue, preview, rate, formatInterval };
+window.MemFlash = {
+    bootstrap,
+    refreshDeck,
+    hasDeck,
+    sync,
+    status,
+    dueQueue,
+    studyQueue,
+    preview,
+    rate,
+    formatInterval,
+    lookUpOnDevice,
+    refreshDictionary,
+    rememberWord,
+};
 
 // Register the service worker so the app shell loads with no network. Skipped on
 // insecure origins, where service workers are unavailable.

@@ -364,6 +364,17 @@ applies it, so keep that logic out of the JS. Results are cached per direction,
 "unknown word"); bump the key version (`word-lookup:vN:`) whenever
 `LookupResult::toArray()` changes shape.
 
+**Known words are answered on the device first** (since 2026-11-12). Lookups took 25–40 s for
+the user although the server answers in ~1 s: the time is lost between their browser and the
+server (measured 2026-11-12), which no server change can fix.
+`GET /api/words/dictionary` sends every curriculum word (all levels) plus the user's own cards
+as `[front, back, pronunciation, mine]` rows; `sync.js` → `refreshDictionary()` keeps them in
+IndexedDB (meta `dictionary`, at most daily) and `lookUpOnDevice()` answers from them
+(`offline/dictionary.js`, pure, tested). The panel shows that answer at once, then merges the
+server's: device translations first and winning the card's translated side, picks the user
+already made kept. A saved word is added on the device at once (`rememberWord()`). en-en
+(meanings only) always goes to the server.
+
 `Text::clean()` normalizes Arabic ي/ك to Persian ی/ک and strips translation-memory
 punctuation; it uses `/u` regexes, **never `trim()` with a character list**, whose
 bytes overlap Persian letters.

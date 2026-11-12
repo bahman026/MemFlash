@@ -67,6 +67,8 @@
                     <span x-show="result.phonetic" class="font-mono text-sm text-gray-500" x-text="result.phonetic"></span>
                     <span class="text-xs font-medium uppercase tracking-wide text-gray-400" x-text="languageName(result.language) + ' → ' + languageName(result.target)"></span>
                 </div>
+                <p x-show="fetchingMore || moreNote" class="-mt-2 text-xs text-gray-400" role="status" aria-live="polite"
+                   x-text="fetchingMore ? 'From the words on this device · getting meanings…' : moreNote"></p>
 
                 <!-- The chosen translation goes on the card -->
                 <div x-show="result.translations.length" class="flex flex-wrap gap-1.5">
@@ -165,6 +167,13 @@ function wordLookup(config) {
             ['en-en', 'EN → EN', 'English → English: the meaning in English'],
         ],
         loading: false,
+        // A device answer is on screen and the server's (with meanings) is on its way.
+        fetchingMore: false,
+        moreNote: null,
+        // Bumped per lookup, so a slow answer to an earlier word is ignored.
+        lookupId: 0,
+        // The user picked a translation or meaning: a later answer must not undo it.
+        touched: false,
         error: null,
         result: null,
         senseIndex: 0,
@@ -187,7 +196,15 @@ function wordLookup(config) {
         /** Alpine runs this on mount. */
         init() {
             if (this.q.trim()) this.lookUp();
-            else if (this.autofocus) this.$nextTick(() => this.$refs.query.focus());
+            else {
+                if (this.autofocus) this.$nextTick(() => this.$refs.query.focus());
+                this.refreshDictionary();
+            }
+        },
+
+        /** Keep the words on this device current (at most daily), in the background. */
+        refreshDictionary() {
+            window.MemFlash?.refreshDictionary?.().catch(() => {});
         },
 
         get cardFront() {
@@ -198,37 +215,87 @@ function wordLookup(config) {
             return (this.missing === 'back' ? this.typed : this.back).trim();
         },
 
+        /**
+         * A word on this device (a lesson word or one of the user's cards) is
+         * shown at once; the server's answer then adds meanings. The server asks
+         * outside services and can be slow on a poor connection, so a known
+         * word never waits for it.
+         */
         async lookUp() {
             const q = this.q.trim();
-            if (!q || this.loading) return;
+            if (!q) return;
 
-            this.loading = true;
+            const id = ++this.lookupId;
+            const direction = this.direction;
             this.error = null;
+            this.moreNote = null;
             this.syncAddressBar();
+
+            const local = await window.MemFlash?.lookUpOnDevice?.(q, direction);
+            if (id !== this.lookupId) return;
+
+            if (local) this.show(local);
+            this.loading = !local;
+            this.fetchingMore = Boolean(local);
 
             try {
                 const response = await this.request(`${this.urls.lookup}?${this.directionParams(q)}`);
                 const data = await response.json().catch(() => ({}));
+                if (id !== this.lookupId) return;
 
                 if (!response.ok) {
-                    this.error = this.errorMessage(response, data);
+                    if (local) this.moreNote = 'From the words on this device. ' + this.errorMessage(response, data);
+                    else this.error = this.errorMessage(response, data);
                     return;
                 }
 
-                this.result = data;
+                this.show(data, local);
+            } catch {
+                if (id !== this.lookupId) return;
+                if (local) this.moreNote = 'From the words on this device. Meanings need a connection.';
+                else this.error = 'Could not reach the server. Looking words up needs a connection.';
+            } finally {
+                if (id === this.lookupId) {
+                    this.loading = false;
+                    this.fetchingMore = false;
+                }
+                this.refreshDictionary();
+            }
+        },
+
+        /**
+         * Put a lookup on screen. `local`, the device's answer already shown,
+         * is merged into the server's: its translations come first (they are the
+         * curriculum's or the user's own), and what the user already picked stays.
+         */
+        show(data, local = null) {
+            const sameWord = this.result !== null && this.result.query === data.query && this.result.direction === data.direction;
+            const keepPicks = sameWord && this.touched;
+            const translations = local ? [...new Set([...local.translations, ...data.translations])] : data.translations;
+
+            this.result = { ...data, translations };
+            this.typed = sameWord ? this.typed : '';
+            this.notice = sameWord ? this.notice : null;
+
+            if (keepPicks) {
+                // Senses arrived after a pick: fill only what is still empty.
+                if (!this.description) this.description = data.card.description ?? '';
+                this.pronunciation ??= data.card.pronunciation ?? local?.card.pronunciation ?? null;
+            } else {
+                this.touched = false;
                 this.senseIndex = 0;
                 this.front = data.card.front;
                 this.back = data.card.back;
                 this.description = data.card.description ?? '';
-                this.pronunciation = data.card.pronunciation;
-                this.missing = !data.card.front ? 'front' : !data.card.back ? 'back' : null;
-                this.typed = '';
-                this.notice = null;
-            } catch {
-                this.error = 'Could not reach the server. Looking words up needs a connection.';
-            } finally {
-                this.loading = false;
+                this.pronunciation = data.card.pronunciation ?? local?.card.pronunciation ?? null;
+
+                // The device's translation is a known-good answer: it wins the
+                // translated side over a machine translation or an English meaning.
+                if (local && data.language === 'fa') this.front = local.card.front;
+                else if (local) this.back = local.card.back;
             }
+
+            this.missing = !this.front ? 'front' : !this.back ? 'back' : null;
         },
 
         /** A new direction applies at once, as on Google Translate. */
@@ -274,6 +341,7 @@ function wordLookup(config) {
         },
 
         useTranslation(text) {
+            this.touched = true;
             if (this.result.language === 'fa') this.front = text;
             else this.back = text;
         },
@@ -285,6 +353,7 @@ function wordLookup(config) {
          */
         useSense(index) {
             const sense = this.result.senses[index];
+            this.touched = true;
             this.senseIndex = index;
             this.description = sense.note ?? '';
             if (sense.back !== null) this.back = sense.back;
@@ -385,6 +454,9 @@ function wordLookup(config) {
                 this.showSelectedList();
                 this.notice = data.message;
                 this.noticeListId = data.list.id;
+
+                // Answered on this device from now on, with no wait.
+                window.MemFlash?.rememberWord?.(this.cardFront, this.cardBack, this.pronunciation);
 
                 // Ready for the next word.
                 this.$refs.query.focus();

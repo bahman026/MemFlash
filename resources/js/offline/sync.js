@@ -31,6 +31,7 @@ import {
     getMeta,
 } from './db.js';
 import { countNewCardStarted, newCardsLeft, selectStudyQueue } from './queue.js';
+import { buildIndex, lookUpLocally } from './dictionary.js';
 
 /**
  * CSRF for the JSON calls.
@@ -438,6 +439,70 @@ export async function openDeck(type, deckId, assets = []) {
     await precache([...deckPages(type, deckId), ...assets]);
 
     return refreshed;
+}
+
+// ---------------------------------------------------------------------------
+// The word dictionary: instant lookups from the device (see dictionary.js)
+// ---------------------------------------------------------------------------
+
+/** Built once per page from the stored rows, then reused for every lookup. */
+let dictionaryIndex = null;
+
+function loadDictionary() {
+    dictionaryIndex ??= getMeta('dictionary')
+        .then((rows) => (rows ? buildIndex(rows) : null))
+        .catch(() => null);
+
+    return dictionaryIndex;
+}
+
+/**
+ * A lookup answered from the words on this device, or null. Never throws: a
+ * device with no IndexedDB, or nothing downloaded yet, just asks the server.
+ */
+export async function lookUpOnDevice(query, direction = 'auto') {
+    try {
+        return lookUpLocally(await loadDictionary(), query, direction);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Download every curriculum word and the user's own cards for lookUpOnDevice(),
+ * at most once per `maxAgeMs`, and only online. Pass 0 to force it, e.g. after
+ * a word was saved.
+ */
+export async function refreshDictionary(maxAgeMs = 24 * 60 * 60 * 1000) {
+    if (!navigator.onLine) return { skipped: 'offline' };
+
+    const last = Date.parse((await getMeta('dictionary_at')) ?? '');
+    if (maxAgeMs > 0 && Number.isFinite(last) && Date.now() - last < maxAgeMs) return { skipped: 'fresh' };
+
+    const response = await request('/api/words/dictionary');
+    if (!response.ok) throw new Error(`Dictionary download failed: ${response.status}`);
+
+    const { entries } = await response.json();
+    await setMeta('dictionary', entries);
+    await setMeta('dictionary_at', new Date().toISOString());
+    dictionaryIndex = Promise.resolve(buildIndex(entries));
+
+    return { entries: entries.length };
+}
+
+/**
+ * Add a word just saved to a list, so it is answered on the device right away
+ * instead of after the next daily download. Never throws.
+ */
+export async function rememberWord(front, back, pronunciation = null) {
+    try {
+        const rows = (await getMeta('dictionary')) ?? [];
+        rows.unshift([front, back, pronunciation, 1]);
+        await setMeta('dictionary', rows);
+        dictionaryIndex = Promise.resolve(buildIndex(rows));
+    } catch {
+        // No IndexedDB: the server still answers.
+    }
 }
 
 /** Sync on reconnect and on load. Safe to call more than once. */
