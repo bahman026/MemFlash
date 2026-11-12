@@ -139,8 +139,11 @@ deleting it is always safe. Use `npm run build` for a static setup; only keep `p
 
 The checkout lives in `~/memflash` on the server (address and user: ask, or see the deploy notes
 kept outside the repo). Its login shell is **fish**, so pipe scripts with `ssh host 'bash -s' <<'EOF'`.
-Production sits in Iran behind Cloudflare and a shared Caddy edge proxy
-(`docker-compose.override.yml`, server-only, untracked).
+Production sits in Iran behind a shared Caddy edge proxy (`docker-compose.override.yml`,
+server-only, untracked), which terminates TLS with its own Let's Encrypt certificates for
+`memflash.ir` and `www.memflash.ir` and renews them itself. **Cloudflare is DNS only since
+2026-11-12** (grey cloud on both A records): proxied, every request went out to a European colo
+and back.
 
 | What changed | Do after `git pull --ff-only` |
 |---|---|
@@ -173,7 +176,8 @@ Production sits in Iran behind Cloudflare and a shared Caddy edge proxy
   Measured from the server itself: `/login` takes 0.06 s direct but ~0.7 s through Cloudflare,
   because every request from Iran goes out to a European colo (LHR) and back. A visitor's ISP
   throttling Cloudflare (or a VPN) turns that into the "very slow" reports; the server's CPU,
-  memory and php-fpm were idle at the time.
+  memory and php-fpm were idle at the time. Turning the proxy off took `/login` from Iran from ~0.7 s to ~0.1 s.
+  Don't turn it back on without measuring from Iran.
 
 ---
 
@@ -530,9 +534,10 @@ seeder/DB-only.
 ### Search engines (since 2026-11-12)
 
 Indexing was never blocked: `robots.txt` allows everything and the home page says
-`index, follow`. Cloudflare **prepends its own managed block** to the served `robots.txt` (it
-disallows AI-training crawlers only); `public/robots.txt` is the part after it and ends with
-`Sitemap: https://memflash.ir/sitemap.xml`. `/sitemap.xml` is a route (`routes/web.php`, name
+`index, follow`. `public/robots.txt` is served as is and ends with
+`Sitemap: https://memflash.ir/sitemap.xml`. (While Cloudflare proxied the site it prepended its own
+managed block disallowing AI-training crawlers; with the proxy off since 2026-11-12, that block is
+gone.) `/sitemap.xml` is a route (`routes/web.php`, name
 `sitemap`) listing only the public pages — `welcome`, `privacy`, `terms` — built from route names
 so the host follows `APP_URL`; add a page there when a new public one appears. Search Console is not
 set up yet (needs a DNS TXT record in Cloudflare, by the owner).
