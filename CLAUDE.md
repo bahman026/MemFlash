@@ -185,11 +185,22 @@ Production sits in Iran behind Cloudflare and a shared Caddy edge proxy
 - Tests: `./vendor/bin/pest`.
 
 CI (`.github/workflows/deploy-application.yml`) runs on push to **every** branch: composer install →
-npm build → pint --test → pest → phpstan. Despite the name it only builds an artifact; it does not deploy.
+npm build → pint --test → pest → `npm run test:js` → phpstan. Despite the name it only builds an
+artifact; it does not deploy.
 
-**Testing reality:** only the two stock `ExampleTest` stubs exist. There is zero coverage of any
-route, controller, policy, or service. Tests run against in-memory SQLite (`phpunit.xml`) while dev
-and prod are Postgres.
+**Testing reality (2026-11-12):** 334 Pest tests on **PostgreSQL** (see Testing below) and 55 JS
+tests (`node --test`, no browser):
+
+- `tests/Unit/` — the pure FSRS scheduler (`Fsrs/`, including `FixtureParityTest` against
+  `tests/fixtures/fsrs-vectors.json`, which the JS mirror shares) and `WordLookup/` text cleaning.
+- `tests/Feature/` — reviews, sync, the optimizer, the study endpoints and migrations (`Fsrs/`),
+  sign-in and blocking, deck import, word lookup and lists, the Google Translate sync, offline
+  deck pages, PWA assets and the sitemap.
+- `resources/js/**/*.test.mjs` — the scheduler mirror, the study queue, the on-device dictionary,
+  and `sync.js` + `db.js` end to end against `offline/fake-indexeddb.mjs`.
+
+Not covered yet: deck edit/delete/export, card edit/delete, level selection, and the Filament admin
+beyond access.
 
 ---
 
@@ -570,7 +581,10 @@ any of these; several are load-bearing on assumptions I can't verify.
   `components/README.md` documents a structure that no longer matches the tree.
 - **Study JS is duplicated** between `resources/js/` (Vite) and `public/js/` (unbundled, actually loaded).
 - **`StaticCardSeeder.php`** (1,039 lines) is unregistered legacy code, superseded by the `File*` split.
-- **Test coverage is still two stock stubs.** Factories now exist for every model, so this is unblocked.
+- **Gaps in test coverage** (the suite itself is substantial, see Code conventions): deck
+  edit/delete/export, card edit/delete, level selection and the Filament admin (beyond who may open
+  it) have no tests. Two
+  stock `ExampleTest` stubs remain in `tests/Unit` and `tests/Feature`.
 
 ### Fixed on 2026-09-29 — do not "re-fix"
 
