@@ -19,6 +19,30 @@ docker compose up -d --build
 
 That is the whole procedure. No crontab, no systemd unit, no Supervisor config.
 
+### Building the image in Iran: `DEBIAN_MIRROR`
+
+On the production server, large international downloads from inside Docker
+crawl: Debian's 9.7 MB package list took 36 s from a container against 3.8 s from
+the host, and `apt` drops a download that stalls for 30 s, so the build looped on
+`Ign: ... Packages` forever (seen 2026-11-11, which left the PHP 8.4.27 pin
+unbuilt). Production's `.env` therefore sets
+
+```bash
+DEBIAN_MIRROR=http://mirror.arvancloud.ir
+```
+
+which the Dockerfile swaps in for `deb.debian.org` (the same file in under a
+second). Empty, the default, keeps Debian's own servers. The image also tells
+`apt` to retry 5 times and wait up to 2 minutes, wherever it is built. NodeSource,
+PECL, npm and Docker Hub are still fetched from abroad; they answered in 1–3 s.
+
+If a build hangs, build it on its own so the running site is untouched, then
+swap the container:
+
+```bash
+docker compose build app && docker compose up -d
+```
+
 ---
 
 ## Why there is no cron entry

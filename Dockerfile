@@ -2,6 +2,19 @@ FROM php:8.4.27-fpm
 
 ARG uid
 ARG gid
+# A Debian mirror to install from instead of deb.debian.org, e.g.
+# http://mirror.arvancloud.ir on the production server in Iran, where large
+# international downloads from containers stall past apt's 30 s timeout and the
+# build never finishes. Empty (the default) keeps the image's own sources.
+ARG DEBIAN_MIRROR=""
+
+# Patient on slow links: retry, and wait up to 2 minutes for a stalled download.
+RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "120";\nAcquire::https::Timeout "120";\n' \
+        > /etc/apt/apt.conf.d/80-slow-network \
+    && if [ -n "$DEBIAN_MIRROR" ]; then \
+        sed -i -E "s#https?://deb\.debian\.org/debian(-security)?#${DEBIAN_MIRROR%/}/debian\1#" /etc/apt/sources.list.d/debian.sources \
+        && grep '^URIs:' /etc/apt/sources.list.d/debian.sources; \
+    fi
 
 RUN apt-get update -y
 RUN apt-get install -y git

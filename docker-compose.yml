@@ -4,6 +4,8 @@ services:
             args:
                 gid: ${GROUP_ID}
                 uid: ${USER_ID}
+                # Empty = deb.debian.org. See Dockerfile.
+                DEBIAN_MIRROR: ${DEBIAN_MIRROR:-}
             context: ./
             dockerfile: Dockerfile
         image: articles
