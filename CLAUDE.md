@@ -6,6 +6,9 @@ Flashcard / spaced-repetition app. English → **Persian (Farsi)** vocabulary tr
 **Stack:** Laravel 12 · PHP 8.4 · PostgreSQL 17 · Livewire 3 · Filament 4 · Tailwind 4 + Vite 7 ·
 Socialite (Google-only auth) · PhpSpreadsheet (CSV/XLSX import).
 
+`AGENTS.md` is a **symlink to this file** (since 2026-11-12; it used to be a copy that drifted
+94 lines behind). Edit `CLAUDE.md` only.
+
 ---
 
 ## Docker dev workflow
@@ -36,7 +39,9 @@ supervises `php-fpm`, `queue` (`queue:work`) and `scheduler` (`schedule:work`).
 **There is no crontab anywhere.** `schedule:work` is a long-running process that calls `schedule:run`
 itself every minute, and PM2 keeps it alive. Scheduled tasks live in `routes/console.php`.
 
-Deploying is `docker compose up -d --build`. Nothing else.
+Deploying is `git pull && docker compose up -d --build`, **plus a manual asset build when JS/CSS
+changed** — see "Deploying to production" below: the entrypoint only builds assets when the Vite
+manifest is missing, and on production it never is.
 
 1. Generates `APP_KEY` only when it is empty.
 2. **Waits for Postgres** — `depends_on` waits for the container, not for the server to accept
@@ -45,7 +50,8 @@ Deploying is `docker compose up -d --build`. Nothing else.
 4. Seeds **only when `static_decks` is empty**, so a fresh DB self-bootstraps and a seeded one is
    left alone. `DatabaseSeeder` runs in one transaction, so a seed killed part-way leaves the
    table empty and the next boot retries it.
-5. Builds assets if the Vite manifest is missing, and removes a stale `public/hot`.
+5. Builds assets if the Vite manifest is missing (`BUILD_ASSETS=missing`, the default), and removes
+   a stale `public/hot`. An existing but **outdated** manifest is not rebuilt.
 
 Behaviour is env-driven: `RUN_WORKERS`, `RUN_MIGRATIONS`, `SEED_IF_EMPTY`, `BUILD_ASSETS`,
 `INSTALL_DEPS`, `CACHE_CONFIG`, `DB_WAIT_TIMEOUT`, set in `.env` and passed to the container by
@@ -82,7 +88,7 @@ First boot still takes a few minutes to seed ~5,000 cards; nginx returns 502 unt
 
 ### ⚠️ The entrypoint is baked into the image — edits need a rebuild
 
-`Dockerfile:58` does `COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh`. The project volume
+The `Dockerfile` does `COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh`. The project volume
 mount does **not** cover it, so editing `docker/entrypoint.sh` has no effect until:
 
 ```bash
@@ -120,8 +126,54 @@ deleting it is always safe. Use `npm run build` for a static setup; only keep `p
   session, and queue are all `database`. Redis is running but idle.
 - Admin access is a **single hardcoded email**, `ADMIN_EMAIL` (default `admin@memflash.dev`), with
   `ADMIN_PASSWORD`. There is no role/permission model.
-- Vite assets are not built by the entrypoint. `npm install && npm run build` (or `npm run dev`) on
-  the host; `public/build` is volume-mounted in.
+- Vite assets are built by the entrypoint only when the manifest is missing; `public/build` is on
+  the bind mount. **`node_modules` is installed for Linux** (inside the container), so `npm run build`
+  on a Mac host fails with `Cannot find module @rollup/rollup-darwin-arm64`. Build in the container:
+  `docker compose run --rm --no-deps -T --entrypoint "" app npm run build`. `npm run test:js` works
+  on the host (plain node).
+- There is no PHP on the Mac host. Run Pest, Pint and PHPStan in a one-off container, which skips
+  the entrypoint so nothing migrates or seeds the dev DB:
+  `docker compose run --rm --no-deps -T --entrypoint "" app sh -c 'php artisan config:clear && ./vendor/bin/pest'`.
+
+### Deploying to production (memflash.ir) — learned 2026-11-11/12
+
+The checkout lives in `~/memflash` on the server (address and user: ask, or see the deploy notes
+kept outside the repo). Its login shell is **fish**, so pipe scripts with `ssh host 'bash -s' <<'EOF'`.
+Production sits in Iran behind Cloudflare and a shared Caddy edge proxy
+(`docker-compose.override.yml`, server-only, untracked).
+
+| What changed | Do after `git pull --ff-only` |
+|---|---|
+| PHP / Blade / routes | `docker compose exec -T app php artisan optimize` — code is bind-mounted, but routes, config and views are cached at boot, so a new route 404s until re-cached |
+| JS / CSS | `docker compose exec -T app sh -c 'npm run build && php artisan view:clear'` |
+| `Dockerfile` / entrypoint | `docker compose build app && docker compose up -d` — build **first**, so a failed build leaves the old container serving |
+| Docs only | nothing |
+
+- **The image build needs `DEBIAN_MIRROR`.** Inside Docker on that server, `deb.debian.org`
+  crawls (9.7 MB package list: 36 s, against 3.8 s from the host), `apt` drops a download stalled for
+  30 s, and the build looped on `Ign: … Packages` forever — which is why the PHP 8.4.27 pin
+  (`54bd905`) stayed unbuilt until 2026-11-12. Production's `.env` sets
+  `DEBIAN_MIRROR=http://mirror.arvancloud.ir` (same file in under a second); the Dockerfile swaps it
+  in for `deb.debian.org` and makes `apt` retry 5× with a 2-minute timeout. Empty = Debian's own
+  servers (local, CI). PECL, NodeSource, npm and Docker Hub answered from there in 1–3 s.
+- **A full image build takes ~10 minutes** there, mostly compiling PHP extensions (`intl` is the
+  slowest); a rebuild with an unchanged Dockerfile takes seconds from cache. After `up -d` the site
+  answers **502 for 20–60 s** while the entrypoint installs dependencies, migrates and caches;
+  that is startup, not a crash loop (check `docker inspect memflash_app --format '{{.RestartCount}}'`).
+- **SSH drops long commands.** Run anything over a minute detached and read its log:
+  `nohup sh -c '…' > ~/memflash-deploy.log 2>&1 < /dev/null &`.
+- **`docker compose exec -T` reads stdin**, so inside a piped `bash -s` script it swallows the rest
+  of the script and nothing after it runs, silently. Add `</dev/null` to every `exec` there.
+- php-fpm runs with `pm.max_children = 5`. Its access log records no URLs or durations, and nginx
+  logs `$time_local` at the **end** of a request — use `/sw.js` (requested on the page's `load`
+  event) to tell page-load time from request time.
+- **Slow lookups were the network, not the server** (2026-11-12): a full uncached lookup takes
+  0.9–1.7 s on the server and requests through Cloudflare answer in under 1.1 s from abroad, yet the
+  user waited 25–40 s. That is why known words are now answered on the device (see Word lookup).
+  Measured from the server itself: `/login` takes 0.06 s direct but ~0.7 s through Cloudflare,
+  because every request from Iran goes out to a European colo (LHR) and back. A visitor's ISP
+  throttling Cloudflare (or a VPN) turns that into the "very slow" reports; the server's CPU,
+  memory and php-fpm were idle at the time.
 
 ---
 
@@ -463,6 +515,16 @@ See `docs/DEPLOYMENT.md`.
 
 Filament admin (`/admin`) covers **only** `User`, `Deck`, `Card`. The entire static-content tree is
 seeder/DB-only.
+
+### Search engines (since 2026-11-12)
+
+Indexing was never blocked: `robots.txt` allows everything and the home page says
+`index, follow`. Cloudflare **prepends its own managed block** to the served `robots.txt` (it
+disallows AI-training crawlers only); `public/robots.txt` is the part after it and ends with
+`Sitemap: https://memflash.ir/sitemap.xml`. `/sitemap.xml` is a route (`routes/web.php`, name
+`sitemap`) listing only the public pages — `welcome`, `privacy`, `terms` — built from route names
+so the host follows `APP_URL`; add a page there when a new public one appears. Search Console is not
+set up yet (needs a DNS TXT record in Cloudflare, by the owner).
 
 ### Views
 
