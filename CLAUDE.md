@@ -192,7 +192,7 @@ CI (`.github/workflows/deploy-application.yml`) runs on push to **every** branch
 npm build → pint --test → pest → `npm run test:js` → phpstan. Despite the name it only builds an
 artifact; it does not deploy.
 
-**Testing reality (2026-11-13):** 343 Pest tests on **PostgreSQL** (see Testing below) and 55 JS
+**Testing reality (2026-11-13):** 343 Pest tests on **PostgreSQL** (see Testing below) and 60 JS
 tests (`node --test`, no browser):
 
 - `tests/Unit/` — the pure FSRS scheduler (`Fsrs/`, including `FixtureParityTest` against
@@ -201,6 +201,7 @@ tests (`node --test`, no browser):
   sign-in and blocking, deck import, word lookup and lists, the Google Translate sync, offline
   deck pages, PWA assets and the sitemap, and the Chrome extension's page, zip and session call.
 - `resources/js/**/*.test.mjs` — the scheduler mirror, the study queue, the on-device dictionary,
+  the browser's Google Translate parser (`offline/google.test.mjs`),
   and `sync.js` + `db.js` end to end against `offline/fake-indexeddb.mjs`.
 
 Not covered yet: deck edit/delete/export, card edit/delete, level selection, and the Filament admin
@@ -430,6 +431,30 @@ applies it, so keep that logic out of the JS. Results are cached per direction,
 30 days when complete, 10 minutes when a part is missing (quota/outage, not
 "unknown word"); bump the key version (`word-lookup:vN:`) whenever
 `LookupResult::toArray()` changes shape.
+
+**Persian comes from the browser, not the server** (since 2026-11-13). The server **cannot
+translate from Iran**. MyMemory (its only translator without `GOOGLE_TRANSLATE_KEY`) never
+answers: the TCP connection opens, then 10 s of silence, from the host and the container alike.
+So every EN → FA lookup waited the 5 s timeout and came back with English meanings but no
+Persian. Google answers the server once or twice and then sends its address to a captcha page
+(`/sorry`, or 429), so a keyless Google provider on the server would not hold up either.
+The user's browser can still reach Google, so `offline/google.js` → `translateInBrowser()` (on
+`window.MemFlash`) asks `clients5.google.com/translate_a/single?client=dict-chrome-ex`, the
+endpoint of Google's own dictionary extension. It sends `Access-Control-Allow-Origin: *` and
+returns dictionary entries (`dt=bd`) besides the translation. `parseGoogle()` puts each part of
+speech's first term before the sentence-style translation ("run" → دویدن, not اجرا کنید).
+The panel's `lookUp()` starts three sources at once, kept in `answers` and merged by `render()`:
+the device (instant), Google from the browser (~1 s), and the server (meanings).
+- The base answer is the server's, else the device's, else Google's.
+- Translations are ordered device → server → Google.
+- The device's translation wins the card's translated side. Google's wins only when the server
+  found no translation.
+The double-click pop-up asks the device, then Google, and goes to the server only for en-en or
+when both have nothing. Unofficial endpoint: if it stops answering, Persian disappears again.
+Then the options are a `GOOGLE_TRANSLATE_KEY` (if Google Cloud billing works from here) or a
+translator reachable from Iran. Production `.env` still lists `mymemory`, so server lookups
+still spend 5 s on it; `WORD_LOOKUP_TRANSLATORS=google` would skip it (not done: needs the
+user's OK).
 
 **Known words are answered on the device first** (since 2026-11-12). Lookups took 25–40 s for
 the user although the server answers in ~1 s: the time is lost between their browser and the
