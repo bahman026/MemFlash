@@ -116,7 +116,7 @@ a change.
 | Variable | Default | Effect |
 |---|---|---|
 | `WORD_LOOKUP_DEFINITIONS` | `wiktionary,datamuse` | English definitions, asked in order until one answers. Empty turns definitions off |
-| `WORD_LOOKUP_TRANSLATORS` | `google,mymemory` | English ↔ Persian, asked in order. Empty turns translation off |
+| `WORD_LOOKUP_TRANSLATORS` | `vocabbank,google,mymemory` | English ↔ Persian, asked in order. Empty turns translation off |
 | `GOOGLE_TRANSLATE_KEY` | — | Google Cloud Translation API key. Until it is set, `google` is skipped |
 | `MYMEMORY_EMAIL` | — | Raises MyMemory's free quota from 5,000 to 50,000 characters a day |
 | `WORD_LOOKUP_TIMEOUT` | `5` | Seconds per request to a service |

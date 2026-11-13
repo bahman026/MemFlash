@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\WordLookup\Providers\DatamuseDefinitions;
 use App\Services\WordLookup\Providers\GoogleCloudTranslator;
 use App\Services\WordLookup\Providers\MyMemoryTranslator;
+use App\Services\WordLookup\Providers\VocabBankTranslator;
 use App\Services\WordLookup\Providers\WiktionaryDefinitions;
 
 $providerList = fn (string $value): array => array_values(array_filter(array_map('trim', explode(',', $value))));
@@ -63,13 +64,16 @@ return [
         'definitions' => $providerList((string) env('WORD_LOOKUP_DEFINITIONS', 'wiktionary,datamuse')),
         // google answers nothing until GOOGLE_TRANSLATE_KEY is set, so listing
         // it first costs nothing and adding the key is all it takes.
-        'translators' => $providerList((string) env('WORD_LOOKUP_TRANSLATORS', 'google,mymemory')),
+        // vocabbank (the word bank on the server, words:import-vocab-bank) first:
+        // it needs no outside service, and from Iran the others rarely answer.
+        'translators' => $providerList((string) env('WORD_LOOKUP_TRANSLATORS', 'vocabbank,google,mymemory')),
         'timeout' => (int) env('WORD_LOOKUP_TIMEOUT', 5),
         'cache_days' => (int) env('WORD_LOOKUP_CACHE_DAYS', 30),
 
         'providers' => [
             'wiktionary' => ['class' => WiktionaryDefinitions::class],
             'datamuse' => ['class' => DatamuseDefinitions::class],
+            'vocabbank' => ['class' => VocabBankTranslator::class],
             'mymemory' => ['class' => MyMemoryTranslator::class, 'email' => env('MYMEMORY_EMAIL')],
             'google' => ['class' => GoogleCloudTranslator::class, 'key' => env('GOOGLE_TRANSLATE_KEY')],
         ],
