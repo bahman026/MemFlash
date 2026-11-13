@@ -7,6 +7,8 @@
             Built with ❤️ for learners everywhere
         </p>
         <p class="text-sm text-gray-400 mb-4">
+            <a href="{{ route('extension') }}" class="hover:text-gray-600 transition-colors">Chrome extension</a>
+            &middot;
             <a href="{{ route('privacy') }}" class="hover:text-gray-600 transition-colors">Privacy Policy</a>
             &middot;
             <a href="{{ route('terms') }}" class="hover:text-gray-600 transition-colors">Terms of Service</a>

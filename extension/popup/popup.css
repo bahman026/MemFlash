@@ -1,0 +1,31 @@
+body { width: 340px; margin: 0; padding: 0 12px 8px; font: 14px system-ui, sans-serif; color: #202124; }
+.tabs { display: flex; border-bottom: 1px solid #dadce0; margin: 0 -12px 10px; }
+.tabs button { flex: 1; padding: 8px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; cursor: pointer; color: #5f6368; }
+.tabs button.active { color: #1a73e8; border-bottom-color: #1a73e8; }
+.row { display: flex; gap: 6px; margin-bottom: 8px; }
+select { flex: 1; }
+textarea { width: 100%; height: 90px; box-sizing: border-box; resize: vertical; }
+#translate { width: 100%; margin-top: 8px; padding: 6px; }
+#result { margin-top: 10px; }
+.result-row { display: flex; align-items: flex-start; gap: 6px; }
+#output { flex: 1; white-space: pre-wrap; font-size: 16px; }
+.star { border: 0; background: none; font-size: 20px; line-height: 1; color: #9aa0a6; cursor: pointer; padding: 0; }
+.star:hover, .star.saved { color: #f4b400; }
+.star:disabled { opacity: 0.5; cursor: wait; }
+#dict { margin-top: 6px; font-size: 13px; }
+.pos { font-style: italic; color: #5f6368; margin-right: 8px; }
+.error { color: #d93025; font-size: 12px; margin-top: 6px; }
+.primary { padding: 6px 14px; color: #fff; background: #1a73e8; border: 0; border-radius: 4px; cursor: pointer; }
+#words { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+#words li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #eee; }
+#words .text { flex: 1; min-width: 0; }
+#words .term { font-weight: bold; }
+#words .meta { color: #5f6368; font-size: 12px; }
+#words .remove { border: 0; background: none; color: #f4b400; font-size: 18px; cursor: pointer; padding: 0; }
+#words .remove:hover { color: #9aa0a6; }
+footer { display: flex; justify-content: space-between; margin-top: 10px; font-size: 12px; color: #5f6368; }
+footer a { color: #1a73e8; text-decoration: none; }
+.notice { color: #188038; font-size: 12px; margin-top: 6px; }
+.label { display: block; font-size: 12px; color: #5f6368; margin-bottom: 4px; }
+#saved-lists select { width: 100%; margin-bottom: 8px; }
+#open-list { display: inline-block; margin-top: 8px; font-size: 12px; color: #1a73e8; text-decoration: none; }

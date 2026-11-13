@@ -146,7 +146,10 @@
                     <a x-show="noticeListId" :href="listUrl(noticeListId)" class="ml-1 font-medium underline hover:no-underline">View list</a>
                 </p>
 
-                <p class="text-xs text-gray-400">Double-click any word to see what it means.</p>
+                <p class="text-xs text-gray-400">
+                    Double-click any word to see what it means.
+                    <a href="{{ route('extension') }}" class="underline hover:text-gray-600">Save words from any site with the Chrome extension.</a>
+                </p>
             </div>
         </template>
     </div>

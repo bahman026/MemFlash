@@ -55,7 +55,7 @@ it('lists the public pages in the sitemap', function (): void {
     $xml = simplexml_load_string($response->getContent());
     $locs = array_map(fn ($url): string => (string) $url->loc, iterator_to_array($xml->url, false));
 
-    expect($locs)->toBe([route('welcome'), route('privacy'), route('terms')]);
+    expect($locs)->toBe([route('welcome'), route('extension'), route('privacy'), route('terms')]);
 
     foreach ($locs as $loc) {
         $this->get(parse_url($loc, PHP_URL_PATH) ?: '/')->assertOk();

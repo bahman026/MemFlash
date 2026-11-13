@@ -1,0 +1,54 @@
+body {
+  margin: 0;
+  padding: 24px 16px;
+  background: #f5f5f5;
+  color: #202124;
+  font: 14px/1.4 Arial, system-ui, sans-serif;
+}
+
+.panel {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 32px 32px;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 2px;
+}
+
+header { text-align: center; margin-bottom: 28px; }
+h1 { margin: 6px 0 0; font-size: 22px; }
+
+.field { display: grid; grid-template-columns: 180px 1fr; gap: 12px; margin-bottom: 24px; }
+.label { font-weight: bold; padding-top: 4px; }
+
+select {
+  width: 180px;
+  padding: 6px;
+  font: inherit;
+  font-weight: bold;
+  background: #f1f1f1;
+  border: 1px solid #ccc;
+}
+
+fieldset { border: 0; padding: 0; margin: 0; }
+legend { padding: 4px 0 8px; }
+fieldset label { display: block; margin: 0 0 10px; }
+fieldset small { display: block; margin-left: 22px; color: #666; font-size: 12px; }
+
+#account { margin: 4px 0 8px; }
+
+.actions { display: flex; align-items: center; gap: 16px; margin-top: 8px; }
+button { padding: 8px 24px; font: inherit; border-radius: 2px; cursor: pointer; }
+.primary { color: #fff; background: #4d90fe; border: 1px solid #3079ed; }
+.primary:hover { background: #357ae8; }
+.secondary { color: #444; background: #f5f5f5; border: 1px solid #ccc; }
+.secondary:hover { background: #eee; }
+#status { color: #188038; }
+#status.error { color: #d93025; }
+
+@media (max-width: 600px) {
+  .field { grid-template-columns: 1fr; gap: 4px; }
+  .panel { padding: 16px; }
+}
+#server { padding: 4px 6px; font: inherit; }
+.field > div > small { display: block; margin-top: 4px; color: #666; font-size: 12px; }

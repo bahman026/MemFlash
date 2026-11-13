@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MemFlash</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <nav class="tabs">
+    <button id="tab-translate" class="active">Translate</button>
+    <button id="tab-saved">★ My words</button>
+  </nav>
+
+  <section id="view-translate">
+    <div class="row">
+      <select id="source"></select>
+      <button id="swap" title="Swap languages">⇄</button>
+      <select id="target"></select>
+    </div>
+    <textarea id="input" placeholder="Enter text…" autofocus></textarea>
+    <button id="translate">Translate</button>
+    <div id="result" hidden>
+      <div class="result-row">
+        <div id="output" dir="auto"></div>
+        <button id="star" class="star" title="Save to my MemFlash word list">☆</button>
+      </div>
+      <div id="dict"></div>
+    </div>
+    <div id="notice" class="notice"></div>
+    <div id="error" class="error"></div>
+  </section>
+
+  <section id="view-saved" hidden>
+    <div id="saved-signin" hidden>
+      <p>Sign in to MemFlash to save words to your word lists and study them.</p>
+      <button id="signin" class="primary">Sign in to MemFlash</button>
+    </div>
+    <div id="saved-lists" hidden>
+      <label for="list" class="label">Save words to</label>
+      <select id="list"></select>
+    </div>
+    <div id="error-saved" class="error"></div>
+    <ul id="words"></ul>
+    <p id="empty" hidden>No words in this list yet. Click the ☆ on a translation to save it.</p>
+    <a href="#" id="open-list" hidden>Open this list in MemFlash »</a>
+  </section>
+
+  <footer>
+    <span id="account"></span>
+    <a href="#" id="options">Options</a>
+  </footer>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

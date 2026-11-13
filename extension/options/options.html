@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MemFlash – Options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main class="panel">
+    <header>
+      <img src="../icons/icon48.png" alt="" width="32" height="32">
+      <h1>MemFlash Extension Options</h1>
+    </header>
+
+    <div class="field">
+      <label for="target" class="label">My primary language:</label>
+      <select id="target"></select>
+    </div>
+
+    <div class="field">
+      <span class="label">Pop-up translations:</span>
+      <fieldset>
+        <legend>When I select a word or phrase:</legend>
+        <label><input type="radio" name="popupMode" value="icon"> Display icon that I can click to show pop-up.</label>
+        <label>
+          <input type="radio" name="popupMode" value="immediate"> Immediately display popup.
+          <small>Any text you select is sent to Google Translate (or MemFlash, when Google can't be reached) to translate it.</small>
+        </label>
+        <label>
+          <input type="radio" name="popupMode" value="none"> Don't display icon or pop-up.
+          <small>You can still translate selected text by right-clicking it, pressing Alt+T, or clicking the extension icon.</small>
+        </label>
+      </fieldset>
+    </div>
+
+    <div class="field">
+      <span class="label">MemFlash account:</span>
+      <div>
+        <div id="account">Checking…</div>
+        <button id="auth" type="button" class="secondary">Sign in to MemFlash</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="server" class="label">MemFlash address:</label>
+      <div>
+        <input id="server" type="url" placeholder="https://memflash.ir" size="32">
+        <small>Leave as https://memflash.ir. Change it only to use a local copy (http://127.0.0.1:5050).</small>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="save" type="button" class="primary">Save</button>
+      <button id="reset" type="button" class="secondary">Reset</button>
+      <span id="status" role="status"></span>
+    </div>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

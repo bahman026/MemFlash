@@ -136,6 +136,15 @@
                 </svg>
                 Dashboard
             </a>
+
+            <!-- The Chrome extension: translate on any page, save to a word list -->
+            <a href="{{ route('extension') }}"
+               class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                <svg class="w-4 h-4 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Chrome extension
+            </a>
         </div>
 
         <!-- Logout Section -->

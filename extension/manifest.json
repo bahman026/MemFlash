@@ -1,0 +1,73 @@
+{
+  "manifest_version": 3,
+  "name": "MemFlash",
+  "version": "1.0.0",
+  "description": "Translate selected text on any page and save words to your MemFlash word lists.",
+  "homepage_url": "https://memflash.ir/extension",
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "activeTab",
+    "scripting",
+    "tts",
+    "offscreen"
+  ],
+  "host_permissions": [
+    "https://translate.googleapis.com/*",
+    "https://memflash.ir/*",
+    "https://www.memflash.ir/*",
+    "http://127.0.0.1:5050/*",
+    "http://localhost:5050/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "MemFlash",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options/options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "languages.js",
+        "content.css",
+        "icons/icon48.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "commands": {
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Alt+T"
+      },
+      "description": "Translate the selected text with MemFlash"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

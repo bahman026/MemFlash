@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeckController;
+use App\Http\Controllers\ExtensionController;
 use App\Http\Controllers\GoogleTranslateSyncController;
 use App\Http\Controllers\LevelSelectionController;
 use App\Http\Controllers\StaticDeckController;
@@ -29,7 +30,7 @@ Route::view('/terms', 'pages.terms')->name('terms');
 // For search engines: the public pages only. Everything else needs a sign-in.
 // Linked from public/robots.txt.
 Route::get('/sitemap.xml', function () {
-    $urls = collect(['welcome', 'privacy', 'terms'])
+    $urls = collect(['welcome', 'extension', 'privacy', 'terms'])
         ->map(fn (string $name): string => '  <url><loc>' . e(route($name)) . '</loc></url>')
         ->implode("\n");
 
@@ -39,6 +40,12 @@ Route::get('/sitemap.xml', function () {
         ['Content-Type' => 'application/xml; charset=UTF-8'],
     );
 })->name('sitemap');
+
+// The MemFlash Chrome extension (extension/). The page and zip are public; the
+// session call answers signed_in: false itself rather than redirecting.
+Route::get('/extension', [ExtensionController::class, 'page'])->name('extension');
+Route::get('/extension/download', [ExtensionController::class, 'download'])->middleware('throttle:20,1')->name('extension.download');
+Route::get('/api/extension/session', [ExtensionController::class, 'session'])->middleware('throttle:60,1')->name('extension.session');
 
 Route::get('auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.login');
 Route::get('auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
