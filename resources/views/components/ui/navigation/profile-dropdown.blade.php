@@ -88,6 +88,43 @@
             </div>
         @endif
 
+        <!-- Settings: the language a double-clicked word is explained in (the lookup's pop-up) -->
+        @if($user)
+            <div class="px-4 py-3 border-b border-gray-100"
+                 x-data="{
+                     target: @js(app(\App\Services\WordListService::class)->peekTargetFor($user)),
+                     pick(value) {
+                         this.target = value;
+                         window.dispatchEvent(new CustomEvent('memflash-peek-target', { detail: value }));
+                         const cookie = document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='));
+                         fetch(@js(route('words.peek-target')), {
+                             method: 'PUT',
+                             credentials: 'same-origin',
+                             headers: {
+                                 Accept: 'application/json',
+                                 'Content-Type': 'application/json',
+                                 'X-Requested-With': 'XMLHttpRequest',
+                                 ...(cookie ? { 'X-XSRF-TOKEN': decodeURIComponent(cookie.slice(11)) } : { 'X-CSRF-TOKEN': @js(csrf_token()) }),
+                             },
+                             body: JSON.stringify({ target: value }),
+                         }).catch(() => {});
+                     },
+                 }"
+                 @memflash-peek-target.window="target = $event.detail">
+                <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Settings</p>
+                <div class="mt-1 flex items-center justify-between gap-2">
+                    <p class="text-sm text-gray-900">Double-click meaning</p>
+                    <div class="flex gap-1" role="radiogroup" aria-label="Show a double-clicked word's meaning in">
+                        <template x-for="[value, label] in [['fa', 'فارسی'], ['en', 'English']]" :key="value">
+                            <button type="button" role="radio" :aria-checked="target === value" @click="pick(value)" x-text="label"
+                                    :class="target === value ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'"
+                                    class="px-2.5 py-0.5 rounded-full border text-xs font-medium transition-colors"></button>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Menu Items -->
         <div class="py-2">
             <!-- Dashboard -->

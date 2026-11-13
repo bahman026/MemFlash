@@ -465,3 +465,24 @@ it('hands the device every lesson word and only the user\'s own cards for instan
 it('keeps the dictionary behind sign-in', function (): void {
     $this->getJson(route('words.dictionary'))->assertStatus(302);
 });
+
+it('explains a double-clicked word in Persian until the user picks English', function (): void {
+    $lists = app(WordListService::class);
+
+    expect($lists->peekTargetFor($this->user))->toBe('fa');
+
+    $this->actingAs($this->user)
+        ->putJson(route('words.peek-target'), ['target' => 'en'])
+        ->assertOk()
+        ->assertJson(['target' => 'en']);
+
+    expect($lists->peekTargetFor($this->user->fresh()))->toBe('en');
+
+    $this->actingAs($this->user)->get(route('words.page'))->assertOk()->assertSee('data-peek-target="en"', false);
+});
+
+it('refuses a pop-up language it does not have', function (): void {
+    $this->actingAs($this->user)
+        ->putJson(route('words.peek-target'), ['target' => 'de'])
+        ->assertStatus(422);
+});

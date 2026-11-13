@@ -31,6 +31,29 @@ class WordListService
     private const SELECTED_LIST = 'word_list_id';
 
     /**
+     * Key in users.preferences holding the language a double-clicked word is
+     * explained in: 'fa' (a Persian translation) or 'en' (an English meaning).
+     */
+    private const PEEK_TARGET = 'peek_target';
+
+    public const PEEK_TARGETS = ['fa', 'en'];
+
+    /**
+     * The language of the double-click pop-up; Persian unless the user chose English.
+     */
+    public function peekTargetFor(User $user): string
+    {
+        $target = $user->preference(self::PEEK_TARGET);
+
+        return in_array($target, self::PEEK_TARGETS, true) ? $target : 'fa';
+    }
+
+    public function setPeekTarget(User $user, string $target): void
+    {
+        $user->setPreference(self::PEEK_TARGET, $target);
+    }
+
+    /**
      * The user's default list, created on first use.
      *
      * firstOrCreate inserts through createOrFirst, so two requests racing here

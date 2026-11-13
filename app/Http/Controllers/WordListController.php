@@ -14,6 +14,7 @@ use App\Services\WordLookup\WordLookupService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -230,5 +231,20 @@ class WordListController extends Controller
         $this->lists->select($request->user(), $list);
 
         return response()->json(['list_id' => $list?->id]);
+    }
+
+    /**
+     * PUT /api/words/peek-target
+     *
+     * The language a double-clicked word is explained in, in the lookup's
+     * pop-up: "fa" (the default) or "en".
+     */
+    public function peekTarget(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['target' => ['required', Rule::in(WordListService::PEEK_TARGETS)]]);
+
+        $this->lists->setPeekTarget($request->user(), $validated['target']);
+
+        return response()->json(['target' => $validated['target']]);
     }
 }

@@ -21,6 +21,8 @@
         'autofocus' => (bool) $autofocus,
         'lists' => $lists,
         'listId' => $selectedListId,
+        // The language a double-clicked word is explained in: 'fa' or 'en'.
+        'peekTarget' => app(\App\Services\WordListService::class)->peekTargetFor(auth()->user()),
         'defaultListName' => \App\Services\WordListService::DEFAULT_LIST_NAME,
         'csrf' => csrf_token(),
         'urls' => [
@@ -28,18 +30,20 @@
             'createList' => route('word-lists.store'),
             'select' => route('word-lists.select'),
             'addWord' => route('word-lists.add-word'),
+            'peekTarget' => route('words.peek-target'),
             'list' => route('decks.show', ['deck' => '__ID__']),
         ],
     ];
 @endphp
 
-<section x-data="wordLookup(@js($config))" class="bg-white shadow-sm rounded-xl border border-gray-100" aria-labelledby="word-lookup-title">
+<section x-data="wordLookup(@js($config))" @dblclick="peekAt($event)" @keydown.escape.window="closePeek()"
+         @scroll.window.passive="closePeek()" @memflash-peek-target.window="setPeekTarget($event.detail, false)" class="bg-white shadow-sm rounded-xl border border-gray-100" aria-labelledby="word-lookup-title">
     <div class="p-3 sm:p-4 space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h2 id="word-lookup-title" class="text-base sm:text-lg font-bold text-gray-900">Look up a word</h2>
 
             <!-- Direction, as Google Translate's sl/tl -->
-            <div class="flex flex-wrap gap-1" role="radiogroup" aria-label="Translation direction">
+            <div data-no-peek class="flex flex-wrap gap-1" role="radiogroup" aria-label="Translation direction">
                 <template x-for="[value, label, title] in directions" :key="value">
                     <button type="button" role="radio" :aria-checked="direction === value" @click="setDirection(value)" x-text="label" :title="title" :aria-label="title"
                             :class="direction === value ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'"
@@ -141,6 +145,49 @@
                     <span x-text="notice"></span>
                     <a x-show="noticeListId" :href="listUrl(noticeListId)" class="ml-1 font-medium underline hover:no-underline">View list</a>
                 </p>
+
+                <p class="text-xs text-gray-400">Double-click any word to see what it means.</p>
+            </div>
+        </template>
+    </div>
+
+    <!-- A double-clicked word, explained without leaving the lookup on screen -->
+    <div x-show="peek" x-cloak style="display: none;" @click.outside="closePeek()" :style="peekStyle" data-peek-target="{{ $config['peekTarget'] }}"
+         role="dialog" aria-label="Meaning of the word" aria-live="polite"
+         class="fixed z-50 w-72 max-w-[calc(100vw-1rem)] bg-white rounded-xl shadow-xl border border-gray-200 p-3 space-y-2 text-left">
+        <template x-if="peek">
+            <div class="space-y-2">
+                <div class="flex items-start justify-between gap-2">
+                    <p class="min-w-0">
+                        <span class="font-bold text-gray-900 break-words" dir="auto" x-text="peek.word"></span>
+                        <span x-show="peek.phonetic" class="ml-1 font-mono text-xs text-gray-500" x-text="peek.phonetic"></span>
+                    </p>
+                    <button type="button" @click="closePeek()" aria-label="Close" class="-mt-1 -mr-1 px-1.5 text-lg leading-none text-gray-400 hover:text-gray-700">&times;</button>
+                </div>
+
+                <p x-show="peek.loading" class="text-sm text-gray-400">Looking up…</p>
+                <p x-show="peek.error" x-text="peek.error" class="text-sm text-red-600"></p>
+
+                <p x-show="peek.translations.length" class="text-base text-gray-900" dir="auto" x-text="peek.translations.join('، ')"></p>
+                <ul x-show="peek.definitions.length" class="space-y-1 text-sm text-gray-800 list-disc list-inside">
+                    <template x-for="(definition, index) in peek.definitions" :key="index">
+                        <li x-text="definition"></li>
+                    </template>
+                </ul>
+                <p x-show="!peek.loading && !peek.error && !peek.translations.length && !peek.definitions.length" class="text-sm text-gray-500">Nothing found.</p>
+
+                <div data-no-peek class="flex items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                    <!-- The setting: kept on the account, Persian unless changed -->
+                    <div class="flex items-center gap-1" role="radiogroup" aria-label="Show the meaning in">
+                        <span class="text-xs text-gray-400">Meaning in</span>
+                        <template x-for="[value, label] in [['fa', 'فارسی'], ['en', 'English']]" :key="value">
+                            <button type="button" role="radio" :aria-checked="peekTarget === value" @click="setPeekTarget(value)" x-text="label"
+                                    :class="peekTarget === value ? 'bg-primary-50 border-primary-300 text-primary-700' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'"
+                                    class="px-2 py-0.5 rounded-full border text-xs font-medium transition-colors"></button>
+                        </template>
+                    </div>
+                    <button type="button" @click="openPeek()" class="text-xs font-semibold text-primary-600 hover:text-primary-800">Look up →</button>
+                </div>
             </div>
         </template>
     </div>
@@ -192,6 +239,10 @@ function wordLookup(config) {
         creating: false,
         newListName: '',
         listError: null,
+        // The double-clicked word's pop-up: { word, phonetic, translations, definitions, loading, error }.
+        peek: null,
+        peekStyle: {},
+        peekId: 0,
 
         /** Alpine runs this on mount. */
         init() {
@@ -357,6 +408,119 @@ function wordLookup(config) {
             this.senseIndex = index;
             this.description = sense.note ?? '';
             if (sense.back !== null) this.back = sense.back;
+        },
+
+        /**
+         * The word under a double click, explained in a small pop-up next to
+         * it. Found from the click's position, not the selection: the meanings
+         * are buttons, whose text browsers do not select.
+         */
+        peekAt(event) {
+            if (event.target.closest('input, select, textarea, [data-no-peek]')) return;
+
+            const word = this.wordAt(event.clientX, event.clientY) || this.wordIn(String(window.getSelection() ?? ''));
+            if (!word) return;
+
+            const width = Math.min(288, window.innerWidth - 16);
+            const left = Math.max(8, Math.min(event.clientX - 24, window.innerWidth - width - 8));
+            // Below the word, or above it near the bottom of the screen.
+            this.peekStyle = event.clientY > window.innerHeight - 220
+                ? { left: `${left}px`, top: 'auto', bottom: `${window.innerHeight - event.clientY + 14}px` }
+                : { left: `${left}px`, top: `${event.clientY + 14}px`, bottom: 'auto' };
+
+            this.explain(word);
+        },
+
+        wordAt(x, y) {
+            let node = null;
+            let offset = 0;
+
+            if (document.caretPositionFromPoint) {
+                const position = document.caretPositionFromPoint(x, y);
+                node = position?.offsetNode ?? null;
+                offset = position?.offset ?? 0;
+            } else if (document.caretRangeFromPoint) {
+                const range = document.caretRangeFromPoint(x, y);
+                node = range?.startContainer ?? null;
+                offset = range?.startOffset ?? 0;
+            }
+
+            return node?.nodeType === Node.TEXT_NODE ? this.wordIn(node.data, offset) : null;
+        },
+
+        /** The word of `text` around `offset` (or its first word): letters, with inner ' - and ZWNJ. */
+        wordIn(text, offset = null) {
+            for (const match of text.matchAll(/[\p{L}\p{M}][\p{L}\p{M}'’\u200c-]*/gu)) {
+                if (offset === null || (match.index <= offset && offset <= match.index + match[0].length)) {
+                    return match[0].replace(/['’\u200c-]+$/u, '').slice(0, 100);
+                }
+            }
+
+            return null;
+        },
+
+        /** English is explained in the chosen language; Persian always in English. */
+        async explain(word) {
+            const id = ++this.peekId;
+            const persian = /\p{Script=Arabic}/u.test(word);
+            const direction = persian ? 'fa-en' : this.peekTarget === 'en' ? 'en-en' : 'en-fa';
+            const [sl, tl] = direction.split('-');
+
+            this.peek = { word, phonetic: null, translations: [], definitions: [], loading: true, error: null };
+
+            const local = await window.MemFlash?.lookUpOnDevice?.(word, direction);
+            if (id !== this.peekId || !this.peek) return;
+
+            if (local) {
+                Object.assign(this.peek, { phonetic: local.phonetic, translations: local.translations.slice(0, 4), loading: false });
+                return;
+            }
+
+            try {
+                const response = await this.request(`${this.urls.lookup}?${new URLSearchParams({ q: word, sl, tl })}`);
+                const data = await response.json().catch(() => ({}));
+                if (id !== this.peekId || !this.peek) return;
+
+                if (!response.ok) {
+                    this.peek.error = this.errorMessage(response, data);
+                    return;
+                }
+
+                const translations = (data.translations ?? []).slice(0, 4);
+                this.peek.phonetic = data.phonetic ?? null;
+                this.peek.translations = translations;
+                // English meanings when asked for, or when there is no translation.
+                this.peek.definitions = direction === 'en-en' || translations.length === 0
+                    ? (data.senses ?? []).slice(0, 3).map((sense) => sense.definition)
+                    : [];
+            } catch {
+                if (id === this.peekId && this.peek) this.peek.error = 'Could not reach the server.';
+            } finally {
+                if (id === this.peekId && this.peek) this.peek.loading = false;
+            }
+        },
+
+        closePeek() {
+            this.peekId++;
+            this.peek = null;
+        },
+
+        /** The setting, kept on the account; an open pop-up follows it at once. */
+        setPeekTarget(value, save = true) {
+            if (value !== 'fa' && value !== 'en') return;
+            const changed = this.peekTarget !== value;
+            this.peekTarget = value;
+
+            if (save) this.request(this.urls.peekTarget, { method: 'PUT', body: { target: value } }).catch(() => {});
+            if (changed && this.peek) this.explain(this.peek.word);
+        },
+
+        /** Make the pop-up's word the lookup itself, where it can be saved. */
+        openPeek() {
+            this.q = this.peek.word;
+            this.closePeek();
+            this.lookUp();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         },
 
         listLabel(list) {
