@@ -472,9 +472,12 @@ word list. `extension/README.md` describes its files.
   browser's MemFlash session cookie (memflash.ir and the local `127.0.0.1:5050` /
   `localhost:5050` are in `host_permissions`). Google OAuth, Drive storage, the manifest `key`
   and `identity` are gone, and `key.pem` was deliberately not copied into the repo.
-  **Not yet confirmed in a real Chrome:** that Chrome sends the SameSite=Lax session cookie on the
-  extension's requests. If the star keeps asking to sign in, this is why; the fallback plan is
-  a token-based sign-in.
+  **Confirmed working on 2026-11-13** (Chrome 157, Windows): the production logs showed
+  `/api/extension/session` returning the signed-in payload (~2.2 KB; signed out it is 30 bytes)
+  and the star's `POST /api/word-lists/words` answering 201. Chrome sends the SameSite=Lax,
+  Secure session cookie to hosts in `host_permissions`, and the CSRF token from the session call
+  is accepted, so the extension needs no token-based sign-in. To check again, grep the
+  `webserver` logs for `extension/session`; the response size tells signed in from signed out.
 - **It reuses the lookup's endpoints.** `POST /api/word-lists/words` saves (the list picked
   last, else the default list) and `PUT /api/word-lists/selected` picks a list. The one new call
   is `GET /api/extension/session` (`ExtensionController`), which sits **outside** `AuthMiddleware`
