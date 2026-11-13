@@ -17,6 +17,7 @@ import {
     sync,
 } from './offline/sync.js';
 import { formatInterval } from './offline/queue.js';
+import { translateInBrowser } from './offline/google.js';
 
 /**
  * Expose the offline API on window so the Blade study screens can use it without
@@ -37,6 +38,7 @@ window.MemFlash = {
     lookUpOnDevice,
     refreshDictionary,
     rememberWord,
+    translateInBrowser,
 };
 
 // Register the service worker so the app shell loads with no network. Skipped on

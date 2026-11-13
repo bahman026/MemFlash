@@ -72,7 +72,7 @@
                     <span class="text-xs font-medium uppercase tracking-wide text-gray-400" x-text="languageName(result.language) + ' → ' + languageName(result.target)"></span>
                 </div>
                 <p x-show="fetchingMore || moreNote" class="-mt-2 text-xs text-gray-400" role="status" aria-live="polite"
-                   x-text="fetchingMore ? 'From the words on this device · getting meanings…' : moreNote"></p>
+                   x-text="fetchingMore ? (answers.local ? 'From the words on this device · getting meanings…' : 'Getting meanings…') : moreNote"></p>
 
                 <!-- The chosen translation goes on the card -->
                 <div x-show="result.translations.length" class="flex flex-wrap gap-1.5">
@@ -222,6 +222,11 @@ function wordLookup(config) {
         moreNote: null,
         // Bumped per lookup, so a slow answer to an earlier word is ignored.
         lookupId: 0,
+        // The current lookup's answers, merged by render(): the server's, the
+        // device's (offline/dictionary.js) and Google Translate's, asked by the
+        // browser (offline/google.js) because the server cannot reach a
+        // translator from Iran.
+        answers: { server: null, local: null, browser: null },
         // The user picked a translation or meaning: a later answer must not undo it.
         touched: false,
         error: null,
@@ -270,10 +275,9 @@ function wordLookup(config) {
         },
 
         /**
-         * A word on this device (a lesson word or one of the user's cards) is
-         * shown at once; the server's answer then adds meanings. The server asks
-         * outside services and can be slow on a poor connection, so a known
-         * word never waits for it.
+         * Three sources at once, each shown as soon as it answers: the words on
+         * this device (instant), Google Translate from the browser (about a
+         * second) and the server (meanings; can be slow on a poor connection).
          */
         async lookUp() {
             const q = this.q.trim();
@@ -281,35 +285,51 @@ function wordLookup(config) {
 
             const id = ++this.lookupId;
             const direction = this.direction;
+            const current = () => id === this.lookupId;
+            this.answers = { server: null, local: null, browser: null };
             this.error = null;
             this.moreNote = null;
             this.syncAddressBar();
 
-            const local = await window.MemFlash?.lookUpOnDevice?.(q, direction);
-            if (id !== this.lookupId) return;
+            const browser = window.MemFlash?.translateInBrowser?.(q, direction) ?? Promise.resolve(null);
+            let serverDone = false;
 
-            if (local) this.show(local);
-            this.loading = !local;
-            this.fetchingMore = Boolean(local);
+            browser.then((answer) => {
+                if (!current() || !answer) return;
+                this.answers.browser = answer;
+                this.error = null;
+                this.render();
+                this.loading = false;
+                this.fetchingMore = !serverDone;
+            });
+
+            const local = await window.MemFlash?.lookUpOnDevice?.(q, direction);
+            if (!current()) return;
+
+            if (local) {
+                this.answers.local = local;
+                this.render();
+            }
+            this.loading = !(this.answers.local || this.answers.browser);
+            this.fetchingMore = !this.loading;
 
             try {
                 const response = await this.request(`${this.urls.lookup}?${this.directionParams(q)}`);
                 const data = await response.json().catch(() => ({}));
-                if (id !== this.lookupId) return;
+                if (!current()) return;
 
                 if (!response.ok) {
-                    if (local) this.moreNote = 'From the words on this device. ' + this.errorMessage(response, data);
-                    else this.error = this.errorMessage(response, data);
+                    this.serverFailed(this.errorMessage(response, data), await browser);
                     return;
                 }
 
-                this.show(data, local);
+                this.answers.server = data;
+                this.render();
             } catch {
-                if (id !== this.lookupId) return;
-                if (local) this.moreNote = 'From the words on this device. Meanings need a connection.';
-                else this.error = 'Could not reach the server. Looking words up needs a connection.';
+                if (current()) this.serverFailed('Meanings need a connection.', await browser);
             } finally {
-                if (id === this.lookupId) {
+                serverDone = true;
+                if (current()) {
                     this.loading = false;
                     this.fetchingMore = false;
                 }
@@ -317,36 +337,56 @@ function wordLookup(config) {
             }
         },
 
+        /** The server failed: say so, unless another source already answered. */
+        serverFailed(message, browserAnswer) {
+            const shown = this.answers.local || this.answers.browser || browserAnswer;
+            if (shown) this.moreNote = (this.answers.local ? 'From the words on this device. ' : 'Translation only. ') + message;
+            else this.error = message === 'Meanings need a connection.' ? 'Could not reach the server. Looking words up needs a connection.' : message;
+        },
+
+        /** The current lookup's answers on screen: the server's first, else the device's, else Google's. */
+        render() {
+            const { server, local, browser } = this.answers;
+            const data = server ?? local ?? browser;
+            if (!data) return;
+
+            this.show(data, data === local ? null : local, data === browser ? null : browser);
+        },
+
         /**
-         * Put a lookup on screen. `local`, the device's answer already shown,
-         * is merged into the server's: its translations come first (they are the
-         * curriculum's or the user's own), and what the user already picked stays.
+         * Put a lookup on screen. `local`, the device's answer, and `browser`,
+         * Google Translate's, are merged into `data`: the device's translations
+         * come first (they are the curriculum's or the user's own), then the
+         * server's, then Google's; and what the user already picked stays.
          */
-        show(data, local = null) {
+        show(data, local = null, browser = null) {
             const sameWord = this.result !== null && this.result.query === data.query && this.result.direction === data.direction;
             const keepPicks = sameWord && this.touched;
-            const translations = local ? [...new Set([...local.translations, ...data.translations])] : data.translations;
+            const translations = [...new Set([...(local?.translations ?? []), ...data.translations, ...(browser?.translations ?? [])])];
 
-            this.result = { ...data, translations };
+            this.result = { ...data, translations, phonetic: data.phonetic ?? local?.phonetic ?? browser?.phonetic ?? null };
             this.typed = sameWord ? this.typed : '';
             this.notice = sameWord ? this.notice : null;
 
             if (keepPicks) {
                 // Senses arrived after a pick: fill only what is still empty.
                 if (!this.description) this.description = data.card.description ?? '';
-                this.pronunciation ??= data.card.pronunciation ?? local?.card.pronunciation ?? null;
+                this.pronunciation ??= data.card.pronunciation ?? local?.card.pronunciation ?? browser?.card.pronunciation ?? null;
             } else {
                 this.touched = false;
                 this.senseIndex = 0;
                 this.front = data.card.front;
                 this.back = data.card.back;
                 this.description = data.card.description ?? '';
-                this.pronunciation = data.card.pronunciation ?? local?.card.pronunciation ?? null;
+                this.pronunciation = data.card.pronunciation ?? local?.card.pronunciation ?? browser?.card.pronunciation ?? null;
 
                 // The device's translation is a known-good answer: it wins the
-                // translated side over a machine translation or an English meaning.
-                if (local && data.language === 'fa') this.front = local.card.front;
-                else if (local) this.back = local.card.back;
+                // translated side over a machine translation or an English
+                // meaning. Google's fills that side when the server found no
+                // translation (its card then holds an English meaning, or nothing).
+                const pick = local ?? (browser && data.translations.length === 0 ? browser : null);
+                if (pick && data.language === 'fa') this.front = pick.card.front;
+                else if (pick) this.back = pick.card.back;
             }
 
             this.missing = !this.front ? 'front' : !this.back ? 'back' : null;
@@ -471,7 +511,11 @@ function wordLookup(config) {
 
             this.peek = { word, phonetic: null, translations: [], definitions: [], loading: true, error: null };
 
-            const local = await window.MemFlash?.lookUpOnDevice?.(word, direction);
+            // The device, then Google from the browser: the server cannot reach
+            // a translator from Iran, so it is only asked for English meanings
+            // or when both have nothing.
+            const local = await window.MemFlash?.lookUpOnDevice?.(word, direction)
+                ?? await window.MemFlash?.translateInBrowser?.(word, direction);
             if (id !== this.peekId || !this.peek) return;
 
             if (local) {
