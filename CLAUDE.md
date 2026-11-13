@@ -192,14 +192,15 @@ CI (`.github/workflows/deploy-application.yml`) runs on push to **every** branch
 npm build → pint --test → pest → `npm run test:js` → phpstan. Despite the name it only builds an
 artifact; it does not deploy.
 
-**Testing reality (2026-11-13):** 343 Pest tests on **PostgreSQL** (see Testing below) and 60 JS
+**Testing reality (2026-11-13):** 347 Pest tests on **PostgreSQL** (see Testing below) and 60 JS
 tests (`node --test`, no browser):
 
 - `tests/Unit/` — the pure FSRS scheduler (`Fsrs/`, including `FixtureParityTest` against
   `tests/fixtures/fsrs-vectors.json`, which the JS mirror shares) and `WordLookup/` text cleaning.
 - `tests/Feature/` — reviews, sync, the optimizer, the study endpoints and migrations (`Fsrs/`),
   sign-in and blocking, deck import, word lookup and lists, the Google Translate sync, offline
-  deck pages, PWA assets and the sitemap, and the Chrome extension's page, zip and session call.
+  deck pages, PWA assets and the sitemap, the Chrome extension's page, zip and session call, and
+  the server's word bank (`VocabBankTest`).
 - `resources/js/**/*.test.mjs` — the scheduler mirror, the study queue, the on-device dictionary,
   the browser's Google Translate parser (`offline/google.test.mjs`),
   and `sync.js` + `db.js` end to end against `offline/fake-indexeddb.mjs`.
@@ -432,7 +433,28 @@ applies it, so keep that logic out of the JS. Results are cached per direction,
 "unknown word"); bump the key version (`word-lookup:vN:`) whenever
 `LookupResult::toArray()` changes shape.
 
-**Persian comes from the browser, not the server** (since 2026-11-13). The server **cannot
+**The server's own word bank answers first** (since 2026-11-13, later the same day).
+`vocab_bank` holds about 27,000 English ↔ Persian pairs from Wiktionary's Persian dictionary
+(kaikki.org extract: 13.6 MB gzipped, about 20k Persian words, CC BY-SA). It is loaded by
+`php artisan words:import-vocab-bank`, which downloads the file and replaces the table in one
+transaction. It isn't scheduled; run it again only to pick up newer Wiktionary data.
+- **Indexing:** `App\Services\WordLookup\VocabBank` indexes each Persian word under the English
+  meanings of its senses, so one table answers both directions.
+- **Ranking:** a meaning carrying a parenthetical qualifier ranks low, so "go (board game)" ≠ "go".
+  Earlier senses rank higher, as does a gloss that is the sense's only meaning. Persian words
+  with more senses and derived words rank higher too, standing in for frequency.
+- **Dropped:** archaic, dialect, Dari/Tajik and form-of senses, proper names, and glosses longer
+  than three words.
+- **Lookup order:** `VocabBankTranslator` is first in the default `WORD_LOOKUP_TRANSLATORS`
+  (`vocabbank,google,mymemory`), so a known word needs no outside service. Unknown words
+  ("throttle") still fall through to the online translators.
+- **Why only the Persian dictionary:** English Wiktionary's Persian translation tables would cover
+  more English words, but they come only inside a 3.4 GB file; the user rejected that as too heavy.
+- **Deploying:** a lookup made before the import finishes is cached for 10 minutes without
+  Persian. On first deploy, those entries were deleted from the `cache` table (keys like
+  `%word-lookup:v2:%` with short expiry).
+
+**Persian also comes from the browser** (since 2026-11-13). The server **cannot
 translate from Iran**. MyMemory (its only translator without `GOOGLE_TRANSLATE_KEY`) never
 answers: the TCP connection opens, then 10 s of silence, from the host and the container alike.
 So every EN → FA lookup waited the 5 s timeout and came back with English meanings but no
