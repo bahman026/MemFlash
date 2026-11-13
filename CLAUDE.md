@@ -192,7 +192,7 @@ CI (`.github/workflows/deploy-application.yml`) runs on push to **every** branch
 npm build → pint --test → pest → `npm run test:js` → phpstan. Despite the name it only builds an
 artifact; it does not deploy.
 
-**Testing reality (2026-11-12):** 334 Pest tests on **PostgreSQL** (see Testing below) and 55 JS
+**Testing reality (2026-11-13):** 336 Pest tests on **PostgreSQL** (see Testing below) and 55 JS
 tests (`node --test`, no browser):
 
 - `tests/Unit/` — the pure FSRS scheduler (`Fsrs/`, including `FixtureParityTest` against
@@ -441,6 +441,21 @@ IndexedDB (meta `dictionary`, at most daily) and `lookUpOnDevice()` answers from
 server's: device translations first and winning the card's translated side, picks the user
 already made kept. A saved word is added on the device at once (`rememberWord()`). en-en
 (meanings only) always goes to the server.
+
+**Double-click a word for its meaning** (since 2026-11-13). Anywhere in the lookup panel
+(definitions, examples, translation chips), a double-click opens a small pop-up beside the word
+(`peekAt()` → `explain()` in `x-ui.word-lookup`). The word is found from the click position
+(`caretPositionFromPoint` / `caretRangeFromPoint`), not the selection, because the meanings are
+buttons and browsers don't select button text. As a side effect, double-clicking a meaning also
+picks it for the card. English is explained in Persian (`en-fa`) by default, or in English
+(`en-en`, up to three definitions). Persian is always explained in English. The pop-up tries the
+device first, then `/api/words/lookup`. Its "Look up →" link makes the word the main lookup so it
+can be saved.
+The setting is `users.preferences.peek_target` (`'fa'` | `'en'`, default `'fa'`,
+`WordListService::peekTargetFor()`), saved by `PUT /api/words/peek-target`. It can be changed in
+two places: a **Settings** row in the profile dropdown (the app has no settings page) and the
+pop-up's footer. Both stay in step through the `memflash-peek-target` window event. Elements
+marked `data-no-peek` (the direction switches) ignore double-clicks.
 
 `Text::clean()` normalizes Arabic ي/ك to Persian ی/ک and strips translation-memory
 punctuation; it uses `/u` regexes, **never `trim()` with a character list**, whose
