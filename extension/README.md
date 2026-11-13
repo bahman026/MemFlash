@@ -12,8 +12,10 @@ Bump `version` in `manifest.json` with each change so users can tell they have t
 ## Features
 - **Select text on any page**: a MemFlash icon appears; click it for a card with the
   translation, phonetics, 🔊 pronunciation and dictionary entries.
-- **☆ Star** saves the word to the MemFlash list picked last (the same list the site's lookup
-  uses). English goes on the card's front: a Persian word is saved with its English translation
+- **☆ Star** saves the word to the list chosen under **Save words to** (Options, or the popup's
+  *My words* tab), kept in `chrome.storage.sync` as `listId`. Left on "Same as MemFlash" it
+  follows the list picked last in the site's lookup. A chosen list that was deleted on the site
+  falls back to that by itself. English goes on the card's front: a Persian word is saved with its English translation
   on the front.
 - **Toolbar popup**: a *Translate* tab, and a *My words* tab that picks the list and shows its
   newest words.
@@ -27,9 +29,8 @@ cookie (`credentials: "include"`; Chrome sends cookies to hosts in `host_permiss
 
 | Call | Purpose |
 |---|---|
-| `GET /api/extension/session` | `{signed_in, user, csrf, lists, list_id, words}`; never redirects |
+| `GET /api/extension/session?list=` | `{signed_in, user, csrf, lists, list_id, chosen_list_found, words}`; never redirects |
 | `POST /api/word-lists/words` | save a word (same endpoint as the site's lookup), CSRF from the session call |
-| `PUT /api/word-lists/selected` | pick the list |
 | `GET /api/words/lookup` | translation fallback for English ↔ Persian when Google Translate fails (often from Iran) |
 
 Signed out, saving opens `/login` in a tab; after signing in there, the star works.
@@ -49,7 +50,8 @@ For local development, set the MemFlash address in Options to `http://127.0.0.1:
 manifest.json      extension config (MV3)
 background.js      service worker: message router, context menu, shortcut
 translate.js       translate() via Google + settings
-memflash.js        MemFlash calls: session, save, pick list, lookup fallback
+memflash.js        MemFlash calls: session, save, choose list, lookup fallback
+lists.js           the "Save words to" picker (popup + options)
 tts.js             pronunciation: Google Translate TTS, chrome.tts fallback
 offscreen/         offscreen document that plays the TTS audio (workers can't)
 languages.js       language list + <select> filler

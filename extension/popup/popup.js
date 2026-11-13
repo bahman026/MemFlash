@@ -1,5 +1,6 @@
 import { fillSelect } from "../languages.js";
 import { getSettings } from "../translate.js";
+import { fillLists } from "../lists.js";
 
 const $ = (id) => document.getElementById(id);
 const send = (msg) => chrome.runtime.sendMessage(msg);
@@ -80,13 +81,7 @@ function renderSession(s) {
     return;
   }
 
-  const select = $("list");
-  select.replaceChildren();
-  if (!s.lists.some((l) => l.is_default_list)) select.add(new Option(`${s.default_list_name} (default)`, ""));
-  for (const list of s.lists) {
-    select.add(new Option(`${list.name}${list.is_default_list ? " (default)" : ""} · ${list.cards_count}`, String(list.id)));
-  }
-  select.value = s.list_id ? String(s.list_id) : "";
+  fillLists($("list"), s);
 
   $("words").replaceChildren(...s.words.map((w) => {
     const li = document.createElement("li");
@@ -114,7 +109,7 @@ async function showSaved() {
 
 $("list").addEventListener("change", async () => {
   const value = $("list").value;
-  const res = await send({ type: "pick-list", listId: value === "" ? null : Number(value) });
+  const res = await send({ type: "choose-list", listId: value === "" ? null : Number(value) });
   if (res.error) $("error-saved").textContent = res.error;
   else showSaved();
 });

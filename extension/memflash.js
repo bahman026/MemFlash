@@ -46,10 +46,15 @@ async function call(path, { method = "GET", body, csrf } = {}) {
   return data;
 }
 
-// Who is signed in, their lists and the newest words of the list picked last.
-// { signed_in, user, csrf, lists, list_id, words, urls }
-export function session() {
-  return call("/api/extension/session");
+// Who is signed in, their lists and the newest words of the list words are saved to:
+// the one chosen in the extension's settings, else the one picked last on the site.
+// { signed_in, user, csrf, lists, list_id, chosen_list_found, words }
+export async function session() {
+  const { listId } = await getSettings();
+  const s = await call(`/api/extension/session${listId ? `?list=${listId}` : ""}`);
+  // The chosen list was deleted on the site: go back to following the site.
+  if (s.signed_in && listId && !s.chosen_list_found) await chrome.storage.sync.set({ listId: null });
+  return s;
 }
 
 export async function signInUrl() {
@@ -75,21 +80,20 @@ export function cardFor(result) {
   };
 }
 
-export async function saveWord(result, listId) {
-  const { csrf, list_id: selected } = await session().then((s) => {
-    if (!s.signed_in) throw new SignedOut();
-    return s;
-  });
+// Saves into the list session() resolved: the extension's chosen list, else the site's.
+export async function saveWord(result) {
+  const s = await session();
+  if (!s.signed_in) throw new SignedOut();
   return call("/api/word-lists/words", {
     method: "POST",
-    csrf,
-    body: { ...cardFor(result), list_id: listId ?? selected ?? "default" },
+    csrf: s.csrf,
+    body: { ...cardFor(result), list_id: s.list_id ?? "default" },
   });
 }
 
-export async function pickList(listId) {
-  const { csrf } = await session();
-  return call("/api/word-lists/selected", { method: "PUT", csrf, body: { list_id: listId } });
+// The extension's own setting; null follows the list picked last on the site.
+export async function chooseList(listId) {
+  await chrome.storage.sync.set({ listId: listId || null });
 }
 
 // MemFlash's own lookup, for English ↔ Persian when Google Translate can't be reached

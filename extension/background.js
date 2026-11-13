@@ -1,5 +1,5 @@
 import { translate, getSettings } from "./translate.js";
-import { session, saveWord, pickList, signInUrl, lookUp, lookupPageUrl, serverUrl } from "./memflash.js";
+import { session, saveWord, chooseList, signInUrl, lookUp, lookupPageUrl, serverUrl } from "./memflash.js";
 import { speak } from "./tts.js";
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -54,10 +54,11 @@ const handlers = {
     const result = await translateAnywhere(text, target, source);
     return { ...result, lookupUrl: await lookupPageUrl(result) };
   },
-  // Saves into the MemFlash list picked last (or listId). Signed out: opens the sign-in page.
-  async "save-word"({ result, listId }) {
+  // Saves into the list chosen in the settings, else the one picked last on the site.
+  // Signed out: opens the sign-in page.
+  async "save-word"({ result }) {
     try {
-      const res = await saveWord(result, listId);
+      const res = await saveWord(result);
       return { saved: true, created: res.created, message: res.message, list: res.list };
     } catch (err) {
       if (err.signedOut) {
@@ -75,8 +76,9 @@ const handlers = {
       throw err;
     }
   },
-  async "pick-list"({ listId }) {
-    return pickList(listId);
+  async "choose-list"({ listId }) {
+    await chooseList(listId);
+    return {};
   },
   async "sign-in"() {
     await chrome.tabs.create({ url: await signInUrl() });

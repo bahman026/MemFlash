@@ -83,3 +83,26 @@ it('lists the extension page in the sitemap and links it from the profile menu',
         ->get(route('dashboard'))
         ->assertSee(route('extension'), false);
 });
+
+it('uses the list chosen in the extension when it is still the user\'s', function (): void {
+    $user = User::factory()->create();
+    $picked = Deck::factory()->for($user)->create(['name' => 'Picked on the site']);
+    $chosen = Deck::factory()->for($user)->create(['name' => 'Chosen in the extension']);
+    Card::factory()->for($chosen)->create(['front' => 'chosen', 'back' => 'برگزیده']);
+    $someoneElses = Deck::factory()->create();
+    $user->setPreference('word_list_id', $picked->id);
+
+    $this->actingAs($user)
+        ->getJson(route('extension.session', ['list' => $chosen->id]))
+        ->assertJsonPath('list_id', $chosen->id)
+        ->assertJsonPath('chosen_list_found', true)
+        ->assertJsonPath('words.0.front', 'chosen');
+
+    // Deleted, or not theirs: back to the list picked on the site.
+    foreach ([$someoneElses->id, 999999, 'nonsense'] as $list) {
+        $this->actingAs($user)
+            ->getJson(route('extension.session', ['list' => $list]))
+            ->assertJsonPath('list_id', $picked->id)
+            ->assertJsonPath('chosen_list_found', false);
+    }
+});

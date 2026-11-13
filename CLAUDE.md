@@ -192,14 +192,14 @@ CI (`.github/workflows/deploy-application.yml`) runs on push to **every** branch
 npm build → pint --test → pest → `npm run test:js` → phpstan. Despite the name it only builds an
 artifact; it does not deploy.
 
-**Testing reality (2026-11-13):** 336 Pest tests on **PostgreSQL** (see Testing below) and 55 JS
+**Testing reality (2026-11-13):** 343 Pest tests on **PostgreSQL** (see Testing below) and 55 JS
 tests (`node --test`, no browser):
 
 - `tests/Unit/` — the pure FSRS scheduler (`Fsrs/`, including `FixtureParityTest` against
   `tests/fixtures/fsrs-vectors.json`, which the JS mirror shares) and `WordLookup/` text cleaning.
 - `tests/Feature/` — reviews, sync, the optimizer, the study endpoints and migrations (`Fsrs/`),
   sign-in and blocking, deck import, word lookup and lists, the Google Translate sync, offline
-  deck pages, PWA assets and the sitemap.
+  deck pages, PWA assets and the sitemap, and the Chrome extension's page, zip and session call.
 - `resources/js/**/*.test.mjs` — the scheduler mirror, the study queue, the on-device dictionary,
   and `sync.js` + `db.js` end to end against `offline/fake-indexeddb.mjs`.
 
@@ -461,6 +461,45 @@ marked `data-no-peek` (the direction switches) ignore double-clicks.
 punctuation; it uses `/u` regexes, **never `trim()` with a character list**, whose
 bytes overlap Persian letters.
 
+### The MemFlash Chrome extension (since 2026-11-13)
+
+`extension/` is a Manifest V3 Chrome extension named **MemFlash**. It began as the user's
+"Quick Translate" extension (`workspace/chore/google-translate-extension`, left untouched there).
+Select text on any page and it shows a translation card; the ☆ star saves the word to a MemFlash
+word list. `extension/README.md` describes its files.
+
+- **No sign-in of its own.** The worker calls the site with `credentials: "include"`, using the
+  browser's MemFlash session cookie (memflash.ir and the local `127.0.0.1:5050` /
+  `localhost:5050` are in `host_permissions`). Google OAuth, Drive storage, the manifest `key`
+  and `identity` are gone, and `key.pem` was deliberately not copied into the repo.
+  **Not yet confirmed in a real Chrome:** that Chrome sends the SameSite=Lax session cookie on the
+  extension's requests. If the star keeps asking to sign in, this is why; the fallback plan is
+  a token-based sign-in.
+- **It reuses the lookup's endpoints.** `POST /api/word-lists/words` saves (the list picked
+  last, else the default list) and `PUT /api/word-lists/selected` picks a list. The one new call
+  is `GET /api/extension/session` (`ExtensionController`), which sits **outside** `AuthMiddleware`
+  and answers `{signed_in: false}` instead of redirecting. Signed in, it returns the user, a
+  `csrf` token for the POSTs, the lists and the target list's 20 newest words. Signed out,
+  the star opens `/login` in a tab.
+- **Which list:** the extension's own setting, "Save words to" (Options and the popup's *My
+  words* tab), is stored as `listId` in `chrome.storage.sync`. It is sent as
+  `/api/extension/session?list=`, and `list_id` comes back as that list only while it is still
+  the user's (`chosen_list_found`); otherwise it is the list picked last on the site, and the
+  extension clears its setting. The extension never changes the site's picked list.
+- **Cards:** English goes on the front, so a Persian selection is saved with its English
+  translation on the front (`cardFor()` in `extension/memflash.js`). The star only adds;
+  deleting a word happens on the site.
+- **Translation** uses Google's unofficial `translate.googleapis.com`, as before. Saving always
+  goes to MemFlash. For English ↔ Persian it falls back to `/api/words/lookup` when Google fails,
+  which it often does from Iran. The default target is Persian. Options include a MemFlash
+  address, for local development only.
+- **Distribution:** there is no Chrome Web Store listing. `/extension` (public, in the sitemap,
+  linked from the profile menu, the footer and the lookup panel) explains "Load unpacked".
+  `/extension/download` zips `extension/` **on each request** into a `memflash-extension/`
+  folder, so the download always matches the deployed code. Bump `version` in
+  `extension/manifest.json` with each change; the page and zip name show it. Extension-only
+  edits deploy with a plain `git pull` (no asset build, no cache).
+
 ### Google Translate saved words (since 2026-10-20)
 
 Google Translate has **no API** for its saved words; its Saved page can only
@@ -553,7 +592,7 @@ Indexing was never blocked: `robots.txt` allows everything and the home page say
 `Sitemap: https://memflash.ir/sitemap.xml`. (While Cloudflare proxied the site it prepended its own
 managed block disallowing AI-training crawlers; with the proxy off since 2026-11-12, that block is
 gone.) `/sitemap.xml` is a route (`routes/web.php`, name
-`sitemap`) listing only the public pages — `welcome`, `privacy`, `terms` — built from route names
+`sitemap`) listing only the public pages — `welcome`, `extension`, `privacy`, `terms` — built from route names
 so the host follows `APP_URL`; add a page there when a new public one appears. Search Console is not
 set up yet (needs a DNS TXT record in Cloudflare, by the owner).
 

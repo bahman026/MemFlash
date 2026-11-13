@@ -68,11 +68,17 @@ class ExtensionController extends Controller
     }
 
     /**
-     * GET /api/extension/session
+     * GET /api/extension/session[?list=12]
      *
      * Who is signed in, a CSRF token for the extension's POSTs, the lists
-     * and the newest words of the list picked last. Answers signed_in: false
-     * instead of redirecting to the sign-in page, which a script cannot use.
+     * and the newest words of the list words are saved to. Answers
+     * signed_in: false instead of redirecting to the sign-in page, which a
+     * script cannot use.
+     *
+     * `list` is the list chosen in the extension's own settings. list_id
+     * echoes it back only when it is still one of the user's decks, and is
+     * otherwise the list picked last on the site (null = the default list,
+     * not created yet), so a deleted list falls back by itself.
      */
     public function session(Request $request): JsonResponse
     {
@@ -82,7 +88,9 @@ class ExtensionController extends Controller
             return response()->json(['signed_in' => false]);
         }
 
-        $listId = $this->lists->selectedListIdFor($user);
+        $chosen = filter_var($request->query('list'), FILTER_VALIDATE_INT);
+        $chosenIsTheirs = is_int($chosen) && $user->decks()->whereKey($chosen)->exists();
+        $listId = $chosenIsTheirs ? $chosen : $this->lists->selectedListIdFor($user);
 
         $words = $listId === null ? collect() : Card::query()
             ->where('deck_id', $listId)
@@ -97,6 +105,8 @@ class ExtensionController extends Controller
             'csrf' => csrf_token(),
             'lists' => $this->lists->pickerListsFor($user),
             'list_id' => $listId,
+            // False when the extension's chosen list is gone (or none was chosen).
+            'chosen_list_found' => $chosenIsTheirs,
             'default_list_name' => WordListService::DEFAULT_LIST_NAME,
             'words' => $words->values(),
         ]);

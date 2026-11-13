@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MemFlash",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Translate selected text on any page and save words to your MemFlash word lists.",
   "homepage_url": "https://memflash.ir/extension",
   "permissions": [

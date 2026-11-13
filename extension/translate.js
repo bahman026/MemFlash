@@ -31,7 +31,8 @@ export async function translate(text, target = "en", source = "auto") {
 
 // MemFlash is an English → Persian trainer, so Persian is the default target.
 // server: the MemFlash site words are saved to (changeable for local development).
-export const DEFAULT_SETTINGS = { targetLang: "fa", popupMode: "icon", server: "https://memflash.ir" };
+// listId: the MemFlash list starred words go to; null = the list picked last on the site.
+export const DEFAULT_SETTINGS = { targetLang: "fa", popupMode: "icon", server: "https://memflash.ir", listId: null };
 
 export async function getSettings() {
   return chrome.storage.sync.get(DEFAULT_SETTINGS);
